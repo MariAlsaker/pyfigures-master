@@ -20,12 +20,13 @@ X, Z = np.mgrid[-8:8:100j, -8:8:100j].transpose((0,2,1))
 grid_xz = np.stack([X, np.zeros((100,100)), Z], axis=2)
 
 # CHOOSE plane and field
-plane = [grid_xz, "grid_xz"] # [grid_xz, "grid_xz"] **or** [grid_xy, "grid_xy"]
+plane = [grid_xy, "grid_xy"] # [grid_xz, "grid_xz"] **or** [grid_xy, "grid_xy"]
 B = coil.getB(plane[0])
 H = coil.getH(plane[0])
 field = [B, "|B| [mT]"] #[H, "|H| [kA/m]"] **or** [B, "|B| [mT]"]
 
 # Display with pyplot
+print(field[0].shape)
 field_magn = np.sqrt(np.sum(field[0]**2, axis=-1))
 ax2 = fig.add_subplot(2,1,2)
 vis = ax2.imshow(field_magn, cmap="plasma")

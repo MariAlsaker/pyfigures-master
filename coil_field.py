@@ -1,6 +1,10 @@
 import numpy as np
 import magpylib as magpy
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import os
+
+PATH = "/Users/marialsaker/git/pyfigures-master"
 
 class Coil_field:
     def __init__(self, diameter:int, current:int):
@@ -25,7 +29,7 @@ class Coil_field:
         plt.title("3D model of conducting loop")
         plt.show()
     
-    def save_visualized_field(self, chosen_field:str, folder:str):
+    def save_visualized_field(self, chosen_field:str):
         """ Create a folder of all field slices """
         if chosen_field=="B":
             field = self.__B_field
@@ -34,20 +38,54 @@ class Coil_field:
         else:
             raise Exception(f"No field called {chosen_field}, only B or H")
         
+        path = os.path.join(PATH, self.get_name()+chosen_field)
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        else:
+            files = os.listdir(path)
+            print(len(files))
+            if len(files)==100:
+                return
         #NOT FINISHED
-        i = 0
-        f_slc = field[50]
-        #for i, f_slc in enumerate(field):
-        name = f"{self.get_name()}_slice{i}"
-        fig = plt.figure()
-
-        field_magn = np.sqrt(np.sum(f_slc[0]**2, axis=-1))
-        plt.savefig(name)
-        return 0
-    
-    def show_field(self, field:str, slice:tuple):
-        """ Create a folder of all field slices """
-        return 0
+        for i, f_slc in enumerate(field):
+            field_magn = np.sqrt(np.sum(f_slc**2, axis=-1))
+            fig = plt.figure()
+            ax = fig.subplots(1, 1)
+            vis = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=50)
+            plt.colorbar(vis)
+            # Save figure if it doesnt exist
+            if i<10:
+                name = f"{self.get_name()}_slice0{i}.png"
+            else:
+                name = f"{self.get_name()}_slice{i}.png"
+            name_path = os.path.join(path, name)
+            if not os.path.isfile(path):
+                plt.savefig(name_path)
+            plt.close()
+        return
+        
+    def show_field(self, chosen_field:str):
+        """ Show a flip book of all slices """
+        if chosen_field=="B":
+            field = self.__B_field
+        elif chosen_field == "H":
+            field = self.__H_field
+        else:
+            raise Exception(f"No field called {chosen_field}, only B or H")
+        
+        fig, ax = plt.subplots()
+        initialized = False
+        imgs = []
+        for i, f_slc in enumerate(field):
+            field_magn = np.sqrt(np.sum(f_slc**2, axis=-1))
+            if not initialized:
+                img = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=50)
+                initialized = True
+            else:
+                ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=50, animated=True)
+            imgs.append(img)
+        ani = animation.ArtistAnimation(fig, imgs, interval=50)
+        plt.show()
 
     def __construct_3Dgrid(self):
         """ Constructs a 3D grid with extent diameter**3
