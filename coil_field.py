@@ -43,7 +43,6 @@ class Coil_field:
             os.mkdir(path)
         else:
             files = os.listdir(path)
-            print(len(files))
             if len(files)==100:
                 return
         #NOT FINISHED
@@ -64,7 +63,7 @@ class Coil_field:
             plt.close()
         return
         
-    def show_field(self, chosen_field:str):
+    def show_field(self, chosen_field:str, gif_name:str=None):
         """ Show a flip book of all slices """
         if chosen_field=="B":
             field = self.__B_field
@@ -73,18 +72,47 @@ class Coil_field:
         else:
             raise Exception(f"No field called {chosen_field}, only B or H")
         
-        fig, ax = plt.subplots()
         initialized = False
         imgs = []
-        for i, f_slc in enumerate(field):
+        fig = plt.figure(figsize=(9,7))
+        ax = fig.add_subplot(1,1,1)
+        vmax = 30
+        for f_slc in field:
             field_magn = np.sqrt(np.sum(f_slc**2, axis=-1))
             if not initialized:
-                img = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=50)
+                img = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=vmax)
+                plt.colorbar(img)
                 initialized = True
             else:
-                ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=50, animated=True)
-            imgs.append(img)
-        ani = animation.ArtistAnimation(fig, imgs, interval=50)
+                img = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=vmax, animated=True)
+            ax.set_title(f"Magnetic flux density, {chosen_field}")
+            ax.set_xlabel("x(mm)")
+            ax.set_ylabel("y(mm)")
+            imgs.append([img])
+        print(len(imgs))
+        ani = animation.ArtistAnimation(fig, imgs, interval=50, blit=True,
+                                repeat_delay=1000)
+        plt.show()
+        if gif_name:
+            writergif = animation.FFMpegWriter(fps=30)
+            ani.save(gif_name, writer=writergif)
+
+    def show_field_slice(self, chosen_field:str, slice):
+        if chosen_field=="B":
+            field = self.__B_field
+        elif chosen_field == "H":
+            field = self.__H_field
+        else:
+            raise Exception(f"No field called {chosen_field}, only B or H")
+        field_magn = np.sqrt(np.sum(field[slice]**2, axis=-1))
+        fig = plt.figure(figsize=(7,7))
+        ax2 = fig.add_subplot(1,1,1)
+        vis = ax2.imshow(field_magn, cmap="plasma")
+        vis.set_extent((-80, 80, -80, 80))
+        ax2.set_title(f"Magnetic flux density, {chosen_field}")
+        ax2.set_xlabel("x(mm)")
+        ax2.set_ylabel("y(mm)")
+        plt.colorbar(vis)
         plt.show()
 
     def __construct_3Dgrid(self):
