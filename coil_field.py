@@ -29,8 +29,12 @@ class Coil_field:
         plt.title("3D model of conducting loop")
         plt.show()
         
-    def show_field(self, chosen_field:str, gif_name:str=None):
-        """ Show a flip book of all slices """
+    def show_field(self, chosen_field:str, vmax:int=30, gif_name:str=None):
+        """ Show an animation of all slices through z-axis. \n 
+        Parameters:
+        - chosen_field: B or H
+        - vmax: maximum value in coloring (very strong field around loop ~200)
+        - gif_name: if you want to save a movie of the animation give a string: \"name.mp4\""""
         if chosen_field=="B":
             field = self.__B_field
         elif chosen_field == "H":
@@ -42,7 +46,6 @@ class Coil_field:
         imgs = []
         fig = plt.figure(figsize=(9,7))
         ax = fig.add_subplot(1,1,1)
-        vmax = 30
         for f_slc in field:
             field_magn = np.sqrt(np.sum(f_slc**2, axis=-1))
             if not initialized:
