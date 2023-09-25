@@ -12,10 +12,10 @@ class Coil_field:
         Params:
         - diameter: int [mm] 
         - current: int [A]"""
-        self.coil_name = f"coil_d{diameter}_I{current}"
         self.__diameter = diameter
-        self.coil = magpy.current.Loop(current=current, diameter=diameter)
-        self.__extent = (diameter + 2)/2
+        self.coil_name = f"coil_d{self.__diameter}_I{current}"
+        self.coil = magpy.current.Loop(current=current, diameter=self.__diameter)
+        self.__extent = (self.__diameter + 2)/2
         self.__3Dgrid = self.__construct_3Dgrid()
         self.__B_field = self.__compute3D_B_field()
         self.__H_field = self.__compute3D_H_field()
@@ -68,12 +68,12 @@ class Coil_field:
             ani.save(gif_name, writer=writergif)
 
     def calc_normalized_field_magn(self, field):
-        f_coil_center = np.sqrt(np.sum(field[50][50][50]))
-        field_magn = np.sqrt(np.sum(field**2, axis=-1))
+        f_coil_center = np.sqrt(np.sum(field[50][50][50]**2))
+        field_magn = np.sqrt(np.sum(np.square(field), axis=-1))
         normalized_field_magn = field_magn/f_coil_center*100
         return normalized_field_magn
 
-    def show_field_slice(self, chosen_field:str, slice):
+    def show_field_slice(self, chosen_field:str, slice, verbose:bool=False, filename:str=None):
         """ Show a specific slice normal to the z-axis. \n 
         Parameters:
         - chosen_field: B or H
@@ -95,6 +95,10 @@ class Coil_field:
         ax2.set_title(f"Magnetic flux density, {chosen_field}, z_ax = {slice*1.6-80:.2f} mm")
         ax2.set_xlabel("x(mm)")
         ax2.set_ylabel("y(mm)")
+        if verbose:
+            print(f"Field magnitude in middle point is {normalized_field_magn[slice][50][50]:.2f}%")
+        if filename:
+            plt.savefig(f"{filename}.svg")
         plt.show()
 
     def __construct_3Dgrid(self):
