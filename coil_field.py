@@ -29,7 +29,7 @@ class Coil_field:
         plt.title("3D model of conducting loop")
         plt.show()
         
-    def show_field(self, chosen_field:str, vmax:int=30, gif_name:str=None):
+    def show_field(self, chosen_field:str, vmax:int=100, gif_name:str=None):
         """ Show an animation of all slices through z-axis. \n 
         Parameters:
         - chosen_field: B or H
@@ -41,24 +41,25 @@ class Coil_field:
             field = self.__H_field
         else:
             raise Exception(f"No field called {chosen_field}, only B or H")
-        
         initialized = False
         imgs = []
         fig = plt.figure(figsize=(9,7))
         ax = fig.add_subplot(1,1,1)
-        for f_slc in field:
-            field_magn = np.sqrt(np.sum(f_slc**2, axis=-1))
+        ticks = np.linspace(0, 100, 5, endpoint=True)
+        normalized_field_magn = self.calc_normalized_field_magn(field)
+        for f_slc in normalized_field_magn:
             if not initialized:
-                img = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=vmax)
-                plt.colorbar(img)
+                img = ax.pcolormesh(f_slc, cmap="plasma", vmin=0, vmax=vmax)
+                plt.colorbar(img, label="[%]")
+                ax.set_title(f"Magnetic flux density, {chosen_field}")
+                ax.set_xlabel("x(mm)")
+                ax.set_xticks(ticks, labels=["-80", "-40", "0", "40", "80"])
+                ax.set_yticks(ticks, labels=["-80", "-40", "0", "40", "80"])
+                ax.set_ylabel("y(mm)")
                 initialized = True
             else:
-                img = ax.pcolormesh(field_magn, cmap="plasma", vmin=0, vmax=vmax, animated=True)
-            ax.set_title(f"Magnetic flux density, {chosen_field}")
-            ax.set_xlabel("x(mm)")
-            ax.set_ylabel("y(mm)")
+                img = ax.pcolormesh(f_slc, cmap="plasma", vmin=0, vmax=vmax, animated=True)
             imgs.append([img])
-        print(len(imgs))
         ani = animation.ArtistAnimation(fig, imgs, interval=50, blit=True,
                                 repeat_delay=1000)
         plt.show()
@@ -66,22 +67,34 @@ class Coil_field:
             writergif = animation.FFMpegWriter(fps=30)
             ani.save(gif_name, writer=writergif)
 
+    def calc_normalized_field_magn(self, field):
+        f_coil_center = np.sqrt(np.sum(field[50][50][50]))
+        field_magn = np.sqrt(np.sum(field**2, axis=-1))
+        normalized_field_magn = field_magn/f_coil_center*100
+        return normalized_field_magn
+
     def show_field_slice(self, chosen_field:str, slice):
+        """ Show a specific slice normal to the z-axis. \n 
+        Parameters:
+        - chosen_field: B or H
+        - slice: int 0 to 100 ranging from -80mm to 80mm below/above the coil"""
         if chosen_field=="B":
             field = self.__B_field
         elif chosen_field == "H":
             field = self.__H_field
         else:
             raise Exception(f"No field called {chosen_field}, only B or H")
-        field_magn = np.sqrt(np.sum(field[slice]**2, axis=-1))
-        fig = plt.figure(figsize=(7,7))
+        normalized_field_magn = self.calc_normalized_field_magn(field)
+        fig = plt.figure(figsize=(9,7))
         ax2 = fig.add_subplot(1,1,1)
-        vis = ax2.imshow(field_magn, cmap="plasma")
-        vis.set_extent((-80, 80, -80, 80))
-        ax2.set_title(f"Magnetic flux density, {chosen_field}")
+        img = ax2.pcolormesh(normalized_field_magn[slice], cmap="plasma", vmin=0, vmax=100)
+        plt.colorbar(img, label="[%]")
+        ticks = np.linspace(0, 100, 5, endpoint=True)
+        ax2.set_xticks(ticks, labels=["-80", "-40", "0", "40", "80"])
+        ax2.set_yticks(ticks, labels=["-80", "-40", "0", "40", "80"])
+        ax2.set_title(f"Magnetic flux density, {chosen_field}, z_ax = {slice*1.6-80:.2f} mm")
         ax2.set_xlabel("x(mm)")
         ax2.set_ylabel("y(mm)")
-        plt.colorbar(vis)
         plt.show()
 
     def __construct_3Dgrid(self):
