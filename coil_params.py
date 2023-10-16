@@ -69,3 +69,4 @@ matching_cap = matching_caps_from_RZ(n_dist_caps, measured_R, 50)
 print(f" --> Matching capacitor, C_m = {matching_cap*1E12:.5f} pF")
 print(f"    (With n caps, we should have {matching_cap*n_caps*1E12:.5f} pF)")
 # Higher value of measured inductance - why?? maybe some inductance from the connector??
+print(f"\nOnly expected loop L = {expected_loop_L(loop_d, wire_d)*1E6:.5f}uH")
