@@ -13,16 +13,16 @@ class Coil_field:
         Params:
         - diameter: int [mm] 
         - current: int [A]"""
-        self.__diameter = diameter
-        self.coil_name = f"coil_d{self.__diameter}_I{current}"
+        self.diameter = diameter
+        self.coil_name = f"coil_d{self.diameter}_I{current}"
         if quadrature:
             r = R.from_euler('zyx', [0., 90., 90.], degrees=True)
             radii  = diameter/2
-            coil1 = magpy.current.Loop(current=current, diameter=self.__diameter)
-            coil2 = magpy.current.Loop(current=current, diameter=self.__diameter, orientation=r, position=(radii, 0, radii))
+            coil1 = magpy.current.Loop(current=current, diameter=self.diameter)
+            coil2 = magpy.current.Loop(current=-current, diameter=self.diameter, orientation=r, position=(radii, 0, radii))
             self.coil = magpy.Collection((coil1, coil2))
         else:
-            self.coil = magpy.current.Loop(current=current, diameter=self.__diameter)
+            self.coil = magpy.current.Loop(current=current, diameter=self.diameter)
         self.__quad = quadrature
         self.__3Dgrid = self.__construct_3Dgrid()
         self.__B_field = self.__compute3D_B_field()
@@ -31,14 +31,16 @@ class Coil_field:
     def get_name(self):
         return self.coil_name
 
-    def show_coil(self):
+    def show_coil(self, ax=None, show=False):
         """ Show a 3D model of this coil object """
-        fig = magpy.show(self.coil, backend='matplotlib',return_fig=True)
-        plt.show()
+        fig = magpy.show(self.coil, backend='matplotlib',return_fig=True, canvas=ax)
+        if show:
+            plt.show()
 
-    def show_field_lines(self, slice=str):
-        fig, ax = plt.subplots()
-        coord_axs = "yxz" 
+    def show_field_lines(self, slice=str, ax=None, show=False, fig=None):
+        if ax == None or fig == None:
+            fig, ax = plt.subplots()
+        coord_axs = "xyz" # old:  "yxz"  
         flip_ax=False
         if slice[0] == "x":
             grid = self.__3Dgrid[:,int(slice[1:]),:]
@@ -52,8 +54,7 @@ class Coil_field:
             grid = self.__3Dgrid[int(slice[1:])]
             B = self.__B_field[int(slice[1:])]
             indices = (0, 1)
-            flip_ax = True
-        print(self.__3Dgrid.shape)
+            flip_ax = False
         log10_norm_B = np.log10(np.linalg.norm(B, axis=2))
         splt = ax.streamplot(
             grid[:, :, indices[0]],
@@ -76,8 +77,8 @@ class Coil_field:
             xlabel=f"{coord_axs[indices[0]]}-position (cm)",
             ylabel=f"{coord_axs[indices[1]]}-position (cm)")
         plt.tight_layout()
-        plt.show()
-        return 0
+        if show:
+            plt.show()
         
     def show_field_magnitude(self, chosen_field:str, vmax:int=100, gif_name:str=None):
         """ Show an animation of the normalized field magnitude in all slices through z-axis. \n 
@@ -155,10 +156,10 @@ class Coil_field:
         """ Constructs a 3D grid with extent diameter**3
         \nNo return, stores grid in object.
         """
-        extent = (self.__diameter+2)/2
+        extent = (self.diameter+2)/2
         X, Y = np.mgrid[-extent:extent:100j, -extent:extent:100j].transpose((0,2,1)) 
         if self.__quad:
-            zs = np.linspace(-2, self.__diameter, 100)
+            zs = np.linspace(-2, self.diameter, 100)
         else:
             zs = np.linspace(-extent, extent, 100)
         grid_3D = []
