@@ -8,18 +8,22 @@ from scipy.spatial.transform import Rotation as R
 PATH = "/Users/marialsaker/git/pyfigures-master"
 
 class Coil_field:
-    def __init__(self, diameter:int, current:int, quadrature:bool=False):
+    def __init__(self, diameter:int, current:int, quadrature:bool=False, quad_dir:str=None):
         """ Initializes a coil object for computing B and/or H field around it. \n
         Params:
         - diameter: int [mm] 
-        - current: int [A]"""
+        - current: int [A]
+        - quadrature: boolean, if this is a quadrature coil or not
+        - quad_dir: string ("out", "in", None) direction of induced flux through coils"""
         self.diameter = diameter
         self.coil_name = f"coil_d{self.diameter}_I{current}"
         if quadrature:
             r = R.from_euler('zyx', [0., 90., 90.], degrees=True)
             radii  = diameter/2
-            coil1 = magpy.current.Loop(current=current, diameter=self.diameter)
-            coil2 = magpy.current.Loop(current=-current, diameter=self.diameter, orientation=r, position=(radii, 0, radii))
+            if quad_dir == "out": a=-1
+            else: a=1
+            coil1 = magpy.current.Loop(current=a*current, diameter=self.diameter)
+            coil2 = magpy.current.Loop(current=-a*current, diameter=self.diameter, orientation=r, position=(radii, 0, radii))
             self.coil = magpy.Collection((coil1, coil2))
         else:
             self.coil = magpy.current.Loop(current=current, diameter=self.diameter)
