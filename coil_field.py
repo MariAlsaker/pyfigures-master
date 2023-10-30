@@ -18,12 +18,12 @@ class Coil_field:
         self.diameter = diameter
         self.coil_name = f"coil_d{self.diameter}_I{current}"
         if quadrature:
-            r = R.from_euler('zyx', [0., 90., 90.], degrees=True)
+            r = R.from_euler('zyx', [0., 135., 0.], degrees=True)
             radii  = diameter/2
             if quad_dir == "out": a=-1
             else: a=1
             coil1 = magpy.current.Loop(current=a*current, diameter=self.diameter)
-            coil2 = magpy.current.Loop(current=-a*current, diameter=self.diameter, orientation=r, position=(radii, 0, radii))
+            coil2 = magpy.current.Loop(current=-a*current, diameter=self.diameter, orientation=r, position=(radii+np.sqrt(radii**2/2), 0., np.sqrt(radii**2/2)))
             self.coil = magpy.Collection((coil1, coil2))
         else:
             self.coil = magpy.current.Loop(current=current, diameter=self.diameter)
@@ -71,7 +71,7 @@ class Coil_field:
             cmap="autumn",
         )
         cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
-        ticks = np.array([3,10,30,100,300])
+        ticks = np.array([3,10,30,100])
         cb.set_ticks(np.log10(ticks))
         cb.set_ticklabels(ticks)
         if flip_ax:
@@ -161,14 +161,14 @@ class Coil_field:
         \nNo return, stores grid in object.
         """
         extent = (self.diameter+2)/2
-        X, Y = np.mgrid[-extent:extent:100j, -extent:extent:100j].transpose((0,2,1)) 
+        X, Y = np.mgrid[-extent:extent*1.5:150j, -extent:extent:150j].transpose((0,2,1)) 
         if self.__quad:
             zs = np.linspace(-2, self.diameter, 100)
         else:
             zs = np.linspace(-extent, extent, 100)
         grid_3D = []
         for z in zs:
-            grid_xy = np.stack([X, Y, np.zeros((100,100)) + z], axis=2)
+            grid_xy = np.stack([X, Y, np.zeros((150,100)) + z], axis=2)
             grid_3D.append(grid_xy)
         grid_3D = np.array(grid_3D)
         return grid_3D
