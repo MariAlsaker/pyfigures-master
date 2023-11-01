@@ -107,67 +107,89 @@ def trace_from_stl(stl_file, x_coords_current=None):
 # Want to create a quadratic surface loop with 
 # x = [-50, 50] meaning 10 cm 
 # y = [-50, 50] meaning 10 cm
-xs_curr_line = np.linspace(-45, 45, 91)
+xs_curr_arc = np.linspace(-45, 45, 91)
 
 # load stl file from online resource
 stl_file_path = "/Users/marialsaker/Library/CloudStorage/OneDrive-UniversityofBergen/Medtek/Master/3Dfiles/Enhancing_holder.stl"
-trace_mesh3d, curr_line_vertices = trace_from_stl(stl_file_path, xs_curr_line)
-
-
-coll = magpy.Collection(position=(0, 0, 100), style_label="'Mesh3d' trace")
+# create trace of mesh and fetch line of current path just below 
+trace_mesh3d, curr_line_vertices = trace_from_stl(stl_file_path, xs_curr_arc)
+# Initiating the collection and placing it close to origo
+coll = magpy.Collection(position=(0, 0, 100), style_label="'Coil holder' trace")
 coll.style.model3d.add_trace(trace_mesh3d)
-#print(type(coll))
+curr_line_vertices[:,2] = curr_line_vertices[:,2] +100 # correcting for offset in 3d stl file
+
 fig3 = plt.figure()
-ax1 = fig3.add_subplot(1,1,1, projection="3d")
+ax1 = fig3.add_subplot(1,2,1, projection="3d")
+# Removing points on support volume
+i_to_remove = []
+for i, vert in enumerate(curr_line_vertices):
+    if(vert[2]<-10):
+        i_to_remove.append(i)
+        continue
+curr_line_vertices = np.delete(curr_line_vertices, i_to_remove, axis=0)
 
-magpy.show(coll, backend="matplotlib", canvas=ax1)
-odd_count = 0
-verts_to_plot = []
-for vert in curr_line_vertices:
-    vert[-1] = vert[-1]+100
-
-    if vert[-1]>-10:
-        if odd_count<0.5*len(curr_line_vertices):
-            if odd_count%2==1:
-                verts_to_plot.append(vert)
-        else:
-            if odd_count%2==0:
-                verts_to_plot.append(vert)
-    odd_count = odd_count+1
-
-verts_to_plot[6][-1] = verts_to_plot[6][-1]-2
-
+# Removing points above fitted curve
 def square(x, a, b):
     return a*x**2 + b
-verts_arr = np.array(verts_to_plot)
-popt, pcov = curve_fit(square, verts_arr[:,0], verts_arr[:,-1])
-xs = [-45., 0., 45.]
-for x in xs:
-    verts_to_plot.append([x, 0., square(x, popt[0], popt[1])])
+popt, pcov = curve_fit(square, curr_line_vertices[:,0], curr_line_vertices[:,2])
+testx = np.linspace(-40, 40, 100)
+i_to_remove = []
+for i, vert in enumerate(curr_line_vertices):
+    if square(vert[0], *popt) < vert[2]:
+        i_to_remove.append(i)
+curr_line_vertices = np.delete(curr_line_vertices, i_to_remove, axis=0)
 
-verts_to_plot = np.array(verts_to_plot)
-sorted_verts = verts_to_plot[verts_to_plot[:,0].argsort()]
-for vert in sorted_verts:
-    print(vert)
-    ax1.plot3D(*vert, '.')
+# Fit a line to the chosen vertices
+popt, pcov = curve_fit(square, curr_line_vertices[:,0], curr_line_vertices[:,2])
+zs_curr_arc = square(xs_curr_arc, *popt)
 
-plt.show()
+vertices_curr_arc_neg = np.concatenate([xs_curr_arc.reshape(len(xs_curr_arc),1), 
+                                        np.ones_like(xs_curr_arc).reshape(len(xs_curr_arc),1)*-45, 
+                                        zs_curr_arc.reshape(len(xs_curr_arc),1)],axis=1)
+vertices_curr_arc_pos = np.concatenate([xs_curr_arc.reshape(len(xs_curr_arc),1), 
+                                        np.ones_like(xs_curr_arc).reshape(len(xs_curr_arc),1)*45, 
+                                        zs_curr_arc.reshape(len(xs_curr_arc),1)],axis=1)
+ys_curr_line = np.linspace(-45, 45, 91).reshape(91,1)
+vertices_curr_line_neg =  np.concatenate([np.ones_like(ys_curr_line)*xs_curr_arc[0], 
+                                          ys_curr_line, 
+                                          np.ones_like(ys_curr_line)*square(xs_curr_arc[0], *popt)], axis=1)
+vertices_curr_line_pos =  np.concatenate([np.ones_like(ys_curr_line)*xs_curr_arc[-1], 
+                                          ys_curr_line, 
+                                          np.ones_like(ys_curr_line)*square(xs_curr_arc[-1], *popt)], axis=1)
+current_line_vertices = np.concatenate([vertices_curr_arc_neg, 
+                                        vertices_curr_line_pos, 
+                                        np.flip(vertices_curr_arc_pos, axis = 0), 
+                                        np.flip(vertices_curr_line_neg, axis=0)])
+current_line_vertices[:,2] = current_line_vertices[:,2]-1
+# for vert in current_line_vertices:
+#     ax1.plot3D(*vert, '.')
 
-# want to make current along verts: at y = -50 and y = +50
-# [-45.           0.           8.26724328] # This is a copy of sorted verts
-# [-38.11604691   0.           5.38938904]
-# [-32.87800217   0.           3.44412231]
-# [-27.54129982   0.           1.78861237]
-# [-22.12194633   0.           0.4278183 ]
-# [-16.63620758   0.          -0.63417053]
-# [-11.10054684   0.          -1.39417267]
-# [ 0.          0.         -2.04089021]
-# [ 5.39494038  0.         -1.85437012]
-# [11.20789719  0.         -1.38236237]
-# [16.74275017  0.         -0.61650085]
-# [22.22736168  0.          0.45129395]
-# [27.6452713   0.          1.81782532]
-# [32.98022079  0.          3.47898865]
-# [38.21619797  0.          5.42980194]
-# [45.          0.          8.26724328]
-# straight line at x = -50 and x = 50 from y = -50 to y = 50 at height of 8.26724328
+# xx = np.linspace(-50, 50, 101)
+# zz = np.linspace(-50, 50, 101)
+# # yy = np.linspace(-extent, extent, 100)
+# X, Z = np.meshgrid(xx, zz)
+# Y = np.ones_like(X)*90
+# ax1.plot_surface(X, Y, Z, alpha=.3, label="y = -90")
+the_coil = magpy.current.Line(100, current_line_vertices)
+
+def construct_3Dgrid(extent):
+    """ Constructs a 3D grid with extent diameter**3
+    \nNo return, stores grid in object.
+    """
+    X, Y = np.mgrid[-extent:extent:100j, -extent:extent:100j].transpose((0,2,1)) # X, Y = np.mgrid[-extent:extent*1.5:150j, -extent:extent:150j].transpose((0,2,1)) 
+    zs = np.linspace(-extent, extent, 100)
+    grid_3D = []
+    for z in zs:
+        grid_xy = np.stack([X, Y, np.zeros((100,100)) + z], axis=2)
+        grid_3D.append(grid_xy)
+    grid_3D = np.array(grid_3D)
+    return grid_3D
+grid = construct_3Dgrid(45.)
+B_field = the_coil.getB(grid)
+print(B_field.shape)
+
+#special_single_loop = coil_field.Coil_field(current=100, diameter=90, custom_coil=True, custom_coil_current_line=the_coil)
+#special_single_loop.show_coil(show=True)
+#magpy.show(coll, backend="matplotlib", canvas=ax1)
+#magpy.show(the_coil, backend="matplotlib", canvas=ax1)
+#plt.show()

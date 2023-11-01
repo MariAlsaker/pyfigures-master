@@ -8,13 +8,15 @@ from scipy.spatial.transform import Rotation as R
 PATH = "/Users/marialsaker/git/pyfigures-master"
 
 class Coil_field:
-    def __init__(self, diameter:int, current:int, quadrature:bool=False, quad_dir:str=None):
+    def __init__(self, current:int, diameter:int=90, quadrature:bool=False, quad_dir:str=None, custom_coil:bool=False, custom_coil_current_line=None):
         """ Initializes a coil object for computing B and/or H field around it. \n
         Params:
         - diameter: int [mm] 
         - current: int [A]
         - quadrature: boolean, if this is a quadrature coil or not
-        - quad_dir: string ("out", "in", None) direction of induced flux through coils"""
+        - quad_dir: string ("out", "in", None) direction of induced flux through coils
+        - custom_coil: tells if there is an input in custom_coil_current_line
+        - custom_coil_current_line: a magpy.current.Line object"""
         self.diameter = diameter
         self.coil_name = f"coil_d{self.diameter}_I{current}"
         if quadrature:
@@ -25,6 +27,8 @@ class Coil_field:
             coil1 = magpy.current.Loop(current=a*current, diameter=self.diameter)
             coil2 = magpy.current.Loop(current=-a*current, diameter=self.diameter, orientation=r, position=(radii+np.sqrt(radii**2/2), 0., np.sqrt(radii**2/2)))
             self.coil = magpy.Collection((coil1, coil2))
+        elif custom_coil:
+            self.coil = custom_coil_current_line
         else:
             self.coil = magpy.current.Loop(current=current, diameter=self.diameter)
         self.__quad = quadrature
@@ -161,14 +165,14 @@ class Coil_field:
         \nNo return, stores grid in object.
         """
         extent = (self.diameter+2)/2
-        X, Y = np.mgrid[-extent:extent*1.5:150j, -extent:extent:150j].transpose((0,2,1)) 
+        X, Y = np.mgrid[-extent:extent:100j, -extent:extent:100j].transpose((0,2,1)) # X, Y = np.mgrid[-extent:extent*1.5:150j, -extent:extent:150j].transpose((0,2,1)) 
         if self.__quad:
             zs = np.linspace(-2, self.diameter, 100)
         else:
             zs = np.linspace(-extent, extent, 100)
         grid_3D = []
         for z in zs:
-            grid_xy = np.stack([X, Y, np.zeros((150,100)) + z], axis=2)
+            grid_xy = np.stack([X, Y, np.zeros((100,100)) + z], axis=2)
             grid_3D.append(grid_xy)
         grid_3D = np.array(grid_3D)
         return grid_3D
