@@ -7,7 +7,7 @@ from scipy.spatial.transform import Rotation as R
 
 PATH = "/Users/marialsaker/git/pyfigures-master"
 
-class Coil_field:
+class MRI_coil:
     def __init__(self, current:int, diameter:int=90, quadrature:bool=False, quad_dir:str=None, custom_coil:bool=False, custom_coil_current_line=None):
         """ Initializes a coil object for computing B and/or H field around it. \n
         Params:
@@ -132,7 +132,7 @@ class Coil_field:
         normalized_field_magn = field_magn/f_coil_center*100
         return normalized_field_magn
 
-    def show_field_slice(self, chosen_field:str, slice, verbose:bool=False, filename:str=None):
+    def show_field_slice(self, chosen_field:str, slice, ax, verbose:bool=False):
         """ Show a specific slice normal to the z-axis. \n 
         Parameters:
         - chosen_field: B or H
@@ -144,21 +144,17 @@ class Coil_field:
         else:
             raise Exception(f"No field called {chosen_field}, only B or H")
         normalized_field_magn = self.calc_normalized_field_magn(field)
-        fig = plt.figure(figsize=(9,7))
-        ax2 = fig.add_subplot(1,1,1)
-        img = ax2.pcolormesh(normalized_field_magn[slice], cmap="plasma", vmin=0, vmax=100)
+        img = ax.pcolormesh(normalized_field_magn[slice], cmap="plasma", vmin=0, vmax=100)
         plt.colorbar(img, label="[%]")
         ticks = np.linspace(0, 100, 5, endpoint=True)
-        ax2.set_xticks(ticks, labels=["-80", "-40", "0", "40", "80"])
-        ax2.set_yticks(ticks, labels=["-80", "-40", "0", "40", "80"])
-        ax2.set_title(f"Magnetic flux density, {chosen_field}, z_ax = {slice*1.6-80:.2f} mm")
-        ax2.set_xlabel("x(mm)")
-        ax2.set_ylabel("y(mm)")
+        ax.set_xticks(ticks, labels=["-80", "-40", "0", "40", "80"])
+        ax.set_yticks(ticks, labels=["-80", "-40", "0", "40", "80"])
+        ax.set_title(f"Magnetic flux density, {chosen_field}, z_ax = {slice*1.6-80:.2f} mm")
+        ax.set_xlabel("x(mm)")
+        ax.set_ylabel("y(mm)")
         if verbose:
             print(f"Field magnitude in middle point is {normalized_field_magn[slice][50][50]:.2f}%")
-        if filename:
-            plt.savefig(f"{filename}.svg")
-        plt.show()
+
 
     def __construct_3Dgrid(self):
         """ Constructs a 3D grid with extent diameter**3

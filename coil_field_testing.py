@@ -1,4 +1,4 @@
-import coil_field
+import MRI_coil
 from matplotlib import pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
@@ -7,21 +7,21 @@ import magpylib as magpy
 from scipy.optimize import curve_fit
 
 """ SINGLE LOOP SURFACE COIL """
-# single_loop_coil = coil_field.Coil_field(15, 100)
-# fig1 = plt.figure(figsize=[12, 6])
-# fig1.suptitle("Single loop coil (D=150mm)")
-# ax1 = fig1.add_subplot(1,2,1, projection="3d")
-# ax2 = fig1.add_subplot(1,2,2) 
-# single_loop_coil.show_coil(ax=ax1)
-# single_loop_coil.show_field_lines(slice="x50", ax=ax2, fig=fig1)
-# ax2.set_title("B-field - magnetic flux")
-# plt.show()
-# single_loop_coil.show_field_slice("B", slice=97)
-# single_loop_coil.show_field_lines(slice="y99")
-# single_loop_coil.show_field("B", gif_name="norm_to_mid_val.mp4")
-# single_loop_coil.show_field_slice("B", slice=50, verbose=True, filename="center_norm")
-# single_loop_coil.show_field_slice("B", slice=97, verbose=True, filename="plus75mm_norm")
-# single_loop_coil.show_field_slice("B", slice=2, verbose=True, filename="minus75mm_norm")
+single_loop_coil = MRI_coil.MRI_coil(15, 100)
+fig1 = plt.figure(figsize=[12, 6])
+fig1.suptitle("Single loop coil (D=150mm)")
+ax1 = fig1.add_subplot(1,2,1, projection="3d")
+ax2 = fig1.add_subplot(1,2,2) 
+single_loop_coil.show_coil(ax=ax1)
+single_loop_coil.show_field_lines(slice="x50", ax=ax2, fig=fig1)
+ax2.set_title("B-field - magnetic flux")
+plt.show()
+single_loop_coil.show_field_slice("B", slice=97)
+single_loop_coil.show_field_lines(slice="y99")
+single_loop_coil.show_field("B", gif_name="norm_to_mid_val.mp4")
+single_loop_coil.show_field_slice("B", slice=50, verbose=True, filename="center_norm")
+single_loop_coil.show_field_slice("B", slice=97, verbose=True, filename="plus75mm_norm")
+single_loop_coil.show_field_slice("B", slice=2, verbose=True, filename="minus75mm_norm")
 
 
 """ QUADRATURE SURFACE COIL """
@@ -39,7 +39,7 @@ def plane_at(slice="x=00", extent=50):
         X, Y = np.meshgrid(xx, yy)
         Z = np.ones_like(X)*int(slice[-2:])
     return X, Y, Z
-quad_coil = coil_field.Coil_field(15, 100, quadrature=True, quad_dir="out")
+quad_coil = MRI_coil.MRI_coil(15, 100, quadrature=True, quad_dir="out")
 # PLOTTING 3D MODEL AND 3 DIFFERENT SLICES WITH FIELD LINES #
 fig2 = plt.figure(figsize=[12, 8])
 fig2.suptitle("Quadrature coils (D=150mm) with field lines in slice z = 7.5cm, y = 0 and x = 0 \n y and x range [-(D+2)/2, (D+2)/d], z range [-2, D]")
@@ -172,7 +172,7 @@ cur_arc_pos = magpy.current.Line(100, np.flip(vertices_curr_arc_pos, axis=0))
 cur_line_neg = magpy.current.Line(100, np.flip(vertices_curr_line_neg, axis=0))
 the_coil = magpy.Collection((cur_arc_neg, cur_line_pos, cur_arc_pos, cur_line_neg))
 
-special_single_loop = coil_field.Coil_field(current=100, diameter=90, custom_coil=True, custom_coil_current_line=the_coil)
+special_single_loop = MRI_coil.MRI_coil(current=100, diameter=90, custom_coil=True, custom_coil_current_line=the_coil)
 special_single_loop.show_coil(show=True)
 special_single_loop.show_field_magnitude("B", gif_name="special_coil_B.mp4")
 #magpy.show(coll, backend="matplotlib", canvas=ax1)
