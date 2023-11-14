@@ -45,7 +45,7 @@ class MRI_coil:
         if show:
             plt.show()
 
-    def show_field_lines(self, slice=str, ax=None, show=False, fig=None):
+    def show_field_lines(self, slice=str, ax=None, show=False, fig=None, colorbar=True):
         if ax == None or fig == None:
             fig, ax = plt.subplots()
         coord_axs = "xyz" # old:  "yxz"  
@@ -74,10 +74,11 @@ class MRI_coil:
             linewidth=log10_norm_B*2,
             cmap="autumn",
         )
-        cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
-        ticks = np.array([3,10,30,100])
-        cb.set_ticks(np.log10(ticks))
-        cb.set_ticklabels(ticks)
+        if colorbar:
+            cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
+            ticks = np.array([3,10,30,100])
+            cb.set_ticks(np.log10(ticks))
+            cb.set_ticklabels(ticks)
         if flip_ax:
             new_i = (indices[1], indices[0])
             indices = new_i
