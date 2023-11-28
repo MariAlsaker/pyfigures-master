@@ -32,6 +32,9 @@ def R_coil(f, L, Q):
     """ Coil resistance from resonant frequency, loop inductance and measured Q-value, preferably loaded (we only measure unloaded Q to see how bad our electric losses are) """
     return omega(f)*L/Q
 
+def C_tot(c1, c2):
+    return (c1*c2)/(c1+c2)
+
 # Wire thickness is 1.5 mm ?
 f = 69.48E6
 L_test = L(f=69.48E6, c=18E-12)
@@ -49,3 +52,7 @@ print(f"For parallel matching circuitry, 2*Cm = {2*C_m*1E12:.2f}")
 # Need to ask Nikolai about choke balun - how to make it and what to make sure of
 # Also need to calculate values for hybrid. 
 # What about fastening the different wires to my coil holders?? Do we need to 3D print?
+
+C_after = C_tot(150E-12, 150E-12)
+C_better = 120E-12 + 26E-12
+print(f"New C = {C_better*1E12:.2f} pF")
