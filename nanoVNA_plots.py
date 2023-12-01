@@ -76,7 +76,7 @@ ax1 = fig.add_subplot(1,2,1)
 c1 = "steelblue"
 c2 = "orange"
 plot_magn_phase(ax1, freqs, magn_db, phase, color1=c1, color2=c2, show_phase=False)
-ax1.set_title("S_11 plot of single lonely loop loaded with elbow")
+ax1.set_title("S_11 plot of single loop loaded with elbow")
 min_mag = np.min(magn)
 min_index = np.where(magn==min_mag)
 plots = ax1.plot(freqs[min_index], magn_db[min_index])

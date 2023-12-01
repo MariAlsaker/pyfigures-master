@@ -135,8 +135,8 @@ the_coil = magpy.Collection((cur_arc_neg, cur_line_pos, cur_arc_pos, cur_line_ne
 
 special_single_loop = MRI_coil.MRI_coil(current=100, diameter=90, custom_coil=True, custom_coil_current_line=the_coil)
 
-fig2 = plt.figure(figsize=[16, 5])
-fig2.suptitle("Single lonely loop coil (s=90mm) with field lines in slice x = 0")
+fig2 = plt.figure(figsize=[15, 5])
+fig2.suptitle("Single loop coil (s=90mm) with field lines in slice x = 0")
 ax1 = fig2.add_subplot(1,3,1, projection="3d")
 ax2 = fig2.add_subplot(1,3,2, projection="3d")
 ax3 = fig2.add_subplot(1,3,3)
