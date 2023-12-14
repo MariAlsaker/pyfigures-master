@@ -58,28 +58,17 @@ def matching_caps_from_RZ(C, resistance, impedance_line):
 # ---- RUNNING CALCULATIONS ---#
 loop_d = 0.105 # [m] = 9 cm
 square_s = 0.09 # [m] = 9 cm
-wire_d = 0.001 # [m] = 1.00 mm
+wire_d = 0.0015 # [m] = 1.00 mm
 n_caps = 2
-# measured_L = 537E-9 # Henry
 measured_R = 3.89 # Ohm
-# meas_cap = cap_from_L(measured_L)
 wire_ends_l = 0.02 # [m] length of wire from loop to SMA connector
 exp_loop_L = expected_loop_L(loop_d, wire_d) #+ expected_wire_L(wire_l=2*wire_ends_l, wire_d=wire_d)
 exp_caps = cap_from_L(exp_loop_L)
 print(f"\nA {wire_d*1000:.1f}mm copper wire shaped as a square with s = {square_s*100:.1f}cm, or as a loop with d = {loop_d*100:.1f}cm")
 exp_R = expected_R(loop_d, wire_d, wire_ends_l*2)
-print(f" - Expected square inductance: {expected_square_L(side_l=square_s, wire_d=wire_d)*1E6:.5f} uH")
+print(f" - Expected square inductance: {expected_square_L(side_l=square_s, wire_d=wire_d)*1E9:.2f} nH")
 print(f"   (Area = {square_s**2} m^2)")
-print(f" - Expected loop inductance: {exp_loop_L*1E6:.5f} uH, Expected loop resistance: {exp_R:.3f} Ohm")
+print(f" - Expected loop inductance: {exp_loop_L*1E9:.2f} nH, Expected loop resistance: {exp_R:.3f} Ohm")
 print(f"   (Area = {(loop_d/2)**2*np.pi} m^2)")
 print(f" --> This means the total cap should be ≈ {exp_caps*1E12:.5f} pF")
 print(f"    (With n caps, we should have {exp_caps*n_caps*1E12:.5f} pF)")
-# print(f" - Measured inductance: {measured_L*1E6:.5f} uH, resistance: {measured_R:.3f} Ohm")
-# print(f" --> This means the total cap should be ≈ {meas_cap*1E12:.5f} pF")
-# n_dist_caps = meas_cap*n_caps
-# print(f"    (With n caps, we should have {n_dist_caps*1E12:.5f} pF)")
-# matching_cap = matching_caps_from_RZ(n_dist_caps, measured_R, 50)
-# print(f" --> Matching capacitor, C_m = {matching_cap*1E12:.5f} pF")
-# print(f"    (With n caps, we should have {matching_cap*n_caps*1E12:.5f} pF)")
-# Higher value of measured inductance - why?? maybe some inductance from the connector??
-print(f"\nOnly expected loop L = {expected_loop_L(loop_d, wire_d)*1E6:.5f}uH")
