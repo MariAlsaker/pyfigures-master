@@ -60,7 +60,8 @@ def C_tot(c1, c2):
 
 myC = C_tot(150*1E-12, 160*1E-12)
 print(myC)
-myL = 3.1e-07 #L(f=33.6*1E6, c=myC) #= 2.89809195051241e-07 = 289.8 nH må økes til 310 nH
+myL = 3.097e-07 #L(f=33.6*1E6, c=myC) #= 2.89809195051241e-07 = 289.8 nH må økes til 310 nH
+# A square loop with side lengths of 9.5 cm will have this
 print(myL)
 my_omega = omega(l=myL, c=myC)
 print(my_omega/(2*np.pi))
