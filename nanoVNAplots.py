@@ -20,10 +20,10 @@ def extract_vals_1p(folder, file):
     with open(folder+file) as f_s11:
         for line in f_s11.readlines():
             if line.split(" ")[0] == "#": continue
-            f, r, i = line.split(" ")
-            freqs.append(float(f)*1E-6)
-            reals.append(float(r))
-            ims.append(float(i))
+            linevals = line.split(" ")
+            freqs.append(float(linevals[0])*1E-6)
+            reals.append(float(linevals[1]))
+            ims.append(float(linevals[2]))
 
     freqs = np.array(freqs)
     reals = np.array(reals)
@@ -49,54 +49,45 @@ def extract_vals_2p(folder, file):
     return vals
 
 
-def plot_magn_phase(ax, freqs, magn_db, phase, color1, color2, show_phase=True, name="S11"):
-    twin1 = ax.twinx()
-    plots = ax.plot(freqs, magn_db, label=f"|{name}|")
+def plot_magn_phase(ax, freq_lists, magn_db_lists, phase, magn_colors, phase_colors, show_phase=True, names="S11"):
+    for i, freqs in enumerate(freq_lists):
+        plots = ax.plot(freqs, magn_db_lists[i], label=f"|S11| {names[i]}")
+        plots[0].set(color = magn_colors[i])
     ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
-    plots[0].set(color = color1)
     if show_phase:
-        plots = twin1.plot(freqs, phase, label="/_ {name}")
-        plots[0].set(color = color2)
+        twin1 = ax.twinx()
+        for i, freqs in enumerate(freq_lists):
+            plots = twin1.plot(freqs, phase, label=f"/_ {names[i]}")
+            plots[0].set(color = phase_colors[i])
         twin1.set_ylabel("Phase [rad/pi]")
-        twin1.yaxis.label.set_color(color2)
-        twin1.tick_params(axis = 'y', colors=color2)
+        twin1.yaxis.label.set_color("blue")
+        twin1.tick_params(axis = 'y', colors="blue")
         twin1.legend()
-        ax.yaxis.label.set_color(color1)
-        ax.tick_params(axis = 'y', colors=color1)
+        ax.yaxis.label.set_color("black")
+        ax.tick_params(axis = 'y', colors="black")
     ax.set_xlabel("Frequency [MHz]")
     ax.set_ylabel("Magnitude [dB]")
     ax.legend()
     ax.grid(True)
     return
 
-freqs, reals, ims, magn, phase = extract_vals_1p(folder, "1-port_single_lonely_loop_elbow.s1p")
-magn_db = 20*np.log10(magn)
+freqs1, reals1, ims1, magn1, phase1 = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
+freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_singleloop_no_load_pult_narrow.s2p")
+magn1_db = 20*np.log10(magn1)
+magn2_db = 20*np.log10(magn2)
 fig = plt.figure(figsize=[12, 6])
 ax1 = fig.add_subplot(1,2,1)
 c1 = "steelblue"
 c2 = "orange"
-plot_magn_phase(ax1, freqs, magn_db, phase, color1=c1, color2=c2, show_phase=False)
-ax1.set_title("S_11 plot of single loop loaded with elbow")
-min_mag = np.min(magn)
-min_index = np.where(magn==min_mag)
-plots = ax1.plot(freqs[min_index], magn_db[min_index])
-plots[0].set(color=c2, marker = "o")
+plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], phase1, magn_colors=[c1,c2], phase_colors=[c1,c2], show_phase=False, names=["elbow load", "no load"])
 ax2 = fig.add_subplot(1,2,2, projection="smith")
-vals_s11 = (reals + ims * 1j)
+vals_s11 = (reals1 + ims1 * 1j)
 plots = ax2.plot(vals_s11, markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
 plots[0].set(color=c1)
-plots = ax2.plot(vals_s11[min_index], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
-plots[0].set(color=c2, marker="o")
-plt.savefig('s11_smith.png', transparent=True)
+vals_s11_2 = (reals2 + ims2 * 1j)
+plots = ax2.plot(vals_s11_2, markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
+plots[0].set(color=c2)
+fig.suptitle("S11 magnitude and smith chart for the single loop")
+plt.show()
 
-values_right = extract_vals_2p(folder, "2-port_quad_loop_elbow_right.s2p")
-values_left = extract_vals_2p(folder, "2-port_quad_loop_elbow_left.s2p")
-s11_db_right = 20*np.log10(values_right[:,3])
-s11_db_left = 20*np.log10(values_left[:,3])
-s21_db = 20*np.log10(values_right[:,7])
-ax2 = fig.add_subplot(1,1,1)
-plot_magn_phase(ax2, values_right[:,0], s11_db_right, values_right[:,4], "r", "r", show_phase=False, name="S11")
-plot_magn_phase(ax2, values_left[:,0], s11_db_left, values_left[:,4], "g", "g", show_phase=False, name="S22")
-plot_magn_phase(ax2, values_right[:,0], s21_db, values_left[:,4], "b", "b", show_phase=False, name="S21")
-ax2.set_title("S parameter plot of quad coil right (1) and left (2), loaded with elbow")
 
