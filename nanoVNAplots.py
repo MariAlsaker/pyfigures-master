@@ -38,15 +38,15 @@ def extract_vals_2p(folder, file):
         for i, line in enumerate(f_s11.readlines()):
             if line.split(" ")[0] == "#": continue
             i = i-1
-            f, r_s11, i_s11, r_s21, i_s21, _, __, ___, ____ = line.split(" ")
-            vals[i][0] = float(f)*1E-6
-            vals[i][1:3] = r_s11, i_s11
-            vals[i][5:7] = r_s21, i_s21
+            linevals= line.split(" ") # f, r_s11, i_s11, r_s21, i_s21, _, __, ___, ____
+            vals[i][0] = float(linevals[0])*1E-6
+            vals[i][1:3] = linevals[1], linevals[2] 
+            vals[i][5:7] = linevals[3], linevals[4]
     vals[:,3] = np.sqrt(vals[:,1]**2 + vals[:,2]**2)
     vals[:,4] = np.arctan(vals[:,2]/(vals[:,1]))
     vals[:,7] = np.sqrt(vals[:,5]**2 + vals[:,6]**2)
-    vals[:,4] = np.arctan(vals[:,6]/(vals[:,5]))
-    return vals
+    vals[:,8] = np.arctan(vals[:,6]/(vals[:,5]))
+    return vals # f, r_s11, i_s11, |S11|, phaseS11, r_s21, i_s21, |S21|, phaseS21
 
 
 def plot_magn_phase(ax, freq_lists, magn_db_lists, phase_list, magn_colors, phase_colors, show_phase=True, names="S11"):
@@ -70,11 +70,26 @@ def plot_magn_phase(ax, freq_lists, magn_db_lists, phase_list, magn_colors, phas
     ax.grid(True)
     return
 
+
+def plot_s11_s21(ax, freq_lists, s11_db_lists, s21_lists, s11_colors, s21_colors, names):
+    for i, freqs in enumerate(freq_lists):
+        plots = ax.plot(freqs, s21_lists[i], label=f"|S21| {names[i]}")
+        plots[0].set(color = s21_colors[i])
+    for i, freqs in enumerate(freq_lists):
+        plots = ax.plot(freqs, s11_db_lists[i], label=f"|S11| {names[i]}")
+        plots[0].set(color = s11_colors[i])
+    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+    ax.set_xlabel("Frequency [MHz]")
+    ax.set_ylabel("Magnitude [dB]")
+    ax.grid(which="both")
+    return
+
 def plot_res(ax, magn, magn_db, freqs, color):
     min_mag = np.min(magn)
-    min_db = 20*np.log10(min_mag)
     min_index = np.where(magn==min_mag)
-    plots = ax.plot(freqs[min_index], magn_db[min_index], label=f"min= {min_db:.0f}dB")
+    min_db = magn_db[min_index]
+    print(freqs[min_index], color)
+    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db[0]:.0f}dB")
     plots[0].set(color=color, marker = "o")
     return min_index
 
@@ -84,6 +99,7 @@ magn1_db = 20*np.log10(magn1)
 magn2_db = 20*np.log10(magn2)
 fig = plt.figure(figsize=[6, 10])
 ax1 = fig.add_subplot(2,1,1)
+ax1.vlines(x=[33.8], ymin=-42, ymax=1, colors="k", linestyles="--", label="f0=33.8MHz")
 c1 = "steelblue"
 c2 = "orange"
 plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], [phase1, phase2], magn_colors=[c1,c2], phase_colors=[c1,c2], show_phase=False, names=["elbow load", "no load"])
@@ -102,23 +118,42 @@ plots[0].set(color="turquoise", marker="o")
 min_index2 = plot_res(ax=ax1, magn=magn2, magn_db=magn2_db, freqs=freqs2, color="red")
 plots = ax2.plot(vals_s11_2[min_index2], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
 plots[0].set(color="red", marker="o")
-
 ax1.legend()
-fig.suptitle("Laboratory tests of the surface loop coil \n loaded and unloaded")
+fig.suptitle("Laboratory tests of the single loop coil \n loaded and unloaded")
 ax1.set_title("|S11| magnitude")
 ax2.set_title("Real and imaginary impedance (Smith chart)")
-plt.savefig('s11_smith.png', transparent=True)
-#plt.show()
+#plt.savefig('s11_smith_singleloop.png', transparent=True)
+print(vals_s11[min_index1])
+print(reals1[min_index1]*50+50, ims1[min_index1]*50)
+plt.show()
 
-# values_right = extract_vals_2p(folder, "2-port_quad_loop_elbow_right.s2p")
-# values_left = extract_vals_2p(folder, "2-port_quad_loop_elbow_left.s2p")
-# s11_db_right = 20*np.log10(values_right[:,3])
-# s11_db_left = 20*np.log10(values_left[:,3])
-# s21_db = 20*np.log10(values_right[:,7])
+
+# # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
+# values_first = extract_vals_2p(folder, "2-port_quadloop_no_load_pult_narrow.s2p")
+# values_switch = extract_vals_2p(folder, "2-port_quadloop_no_load_pult_switch_narrow.s2p")
+# # values_first = extract_vals_2p(folder, "2-port_quadloop_elbow_load_pult_narrow.s2p")
+# # values_switch = extract_vals_2p(folder, "2-port_quadloop_elbow_load_pult_switch_narrow.s2p")
+# values_first[:,3] = 20*np.log10(values_first[:,3])
+# values_first[:,7] = 20*np.log10(values_first[:,7])
+# values_switch[:,3] = 20*np.log10(values_switch[:,3])
+# values_switch[:,7] = 20*np.log10(values_switch[:,7])
+# fig = plt.figure(figsize=[8, 6])
 # ax2 = fig.add_subplot(1,1,1)
-# plot_magn_phase(ax2, values_right[:,0], s11_db_right, values_right[:,4], "r", "r", show_phase=False, name="S11")
-# plot_magn_phase(ax2, values_left[:,0], s11_db_left, values_left[:,4], "g", "g", show_phase=False, name="S22")
-# plot_magn_phase(ax2, values_right[:,0], s21_db, values_left[:,4], "b", "b", show_phase=False, name="S21")
-# ax2.set_title("S parameter plot of quad coil right (1) and left (2), loaded with elbow")
+# ax2.vlines(x=[33.8],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f0=33.8MHz")
+# plot_s11_s21(ax=ax2, freq_lists=[values_first[:,0], values_switch[:,0]], 
+#                 s11_db_lists=[values_first[:,3], values_switch[:,3]], s11_colors=["steelblue", "orange"],
+#                 s21_lists=[values_first[:,7], values_switch[:,7]], s21_colors=["turquoise", "salmon"],
+#                 names=["no load", "no load switch"])
+# min_i_first = plot_res(ax2, magn=1/20*10**values_first[:,3], magn_db=values_first[:,3], freqs=values_first[:,0], color="darkblue")
+# min_i_switch = plot_res(ax2, magn=1/20*10**values_switch[:,3], magn_db=values_switch[:,3], freqs=values_switch[:,0], color="orangered")
+# #ax2.set_title("S11 and S12 magnitudes for both connections,\nquadrature coil was loaded with elbow")
+# ax2.set_title("S11 and S12 magnitudes for both connections,\nquadrature coil was unloaded")
+# ax2.legend()
+# plt.savefig('s11_s21_smith_quadrature_unloaded.png', transparent=True)
+# #plt.savefig('s11_s21_smith_quadrature_loaded.png', transparent=True)
 
-# Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
+# # f, r_s11, i_s11, |S11|, phaseS11, r_s21, i_s21, |S21|, phaseS21
+# print(values_first[min_i_first, 1]*50+50, values_first[min_i_first, 2]*50)
+# print(values_switch[min_i_switch, 1]*50+50, values_switch[min_i_switch, 2]*50)
+
+# plt.show()
