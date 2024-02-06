@@ -107,19 +107,17 @@ def q_factor(freqs, magn_db, reals, ims, z0):
 """ SINGLE LOOP COIL PLOTS AND MEASUREMENTS """
 show_single_plots = True
 print_Qs_single = True
-# freqs1, reals1, ims1, magn1, phase1 = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
-# freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_singleloop_no_load_pult_narrow.s2p")
-freqs1, reals1, ims1, magn1, phase1 = extract_vals_1p(folder, "1-port_enhancing_3Na_load_pult_narrow.s1p")
-freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_enhancing_no_load_pult_narrow.s1p")
+freqs1, reals1, ims1, magn1, phase1 = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
+freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_singleloop_no_load_pult_narrow.s2p")
 
 magn1_db = 20*np.log10(magn1)
 magn2_db = 20*np.log10(magn2)
 fig = plt.figure(figsize=[6, 10])
 ax1 = fig.add_subplot(2,1,1)
-ax1.vlines(x=[33.8], ymin=-5, ymax=1, colors="k", linestyles="--", label="f0=33.8MHz") # ymin=-42 or ymin=-5
+ax1.vlines(x=[33.8], ymin=-42, ymax=1, colors="k", linestyles="--", label="f0=33.8MHz")
 c1 = "steelblue"
 c2 = "orange"
-plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], [phase1, phase2], magn_colors=[c1,c2], phase_colors=[c1,c2], show_phase=False, names=["3Na load", "no load"]) #["elbow load", "no load"]
+plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], [phase1, phase2], magn_colors=[c1,c2], phase_colors=[c1,c2], show_phase=False, names=["elbow load", "no load"])
 ax2 = fig.add_subplot(2,1,2, projection="smith")
 # Plotting smith charts
 for freqs, reals, ims, c, magn_db, c_spes in [(freqs1, reals1, ims1, c1, magn1_db, "turquoise"), 
@@ -130,13 +128,12 @@ for freqs, reals, ims, c, magn_db, c_spes in [(freqs1, reals1, ims1, c1, magn1_d
     min_index = plot_res(ax=ax1, magn_db=magn_db, freqs=freqs, color=c_spes)
     plots = ax2.plot(vals_s11[min_index], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
     plots[0].set(color=c_spes, marker="o")
-    print(freqs[min_index])
     
 ax1.legend()
-fig.suptitle("Laboratory tests of the enhancing coil \n loaded and unloaded")
+fig.suptitle("Laboratory tests of the single loop coil \n loaded and unloaded")
 ax1.set_title("|S11| magnitude")
 ax2.set_title("Real and imaginary impedance (Smith chart)")
-#plt.savefig('s11_smith_enhancingloop.png', transparent=True)
+#plt.savefig('s11_smith_singleloop.png', transparent=True)
 if show_single_plots:
     plt.show()
 Q_load = q_factor(freqs1, magn1_db, reals1, ims1, z0=50)
