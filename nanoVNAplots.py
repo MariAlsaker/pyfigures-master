@@ -104,9 +104,18 @@ def q_factor(freqs, magn_db, reals, ims, z0):
     partX = (n*(np.sum(pos_slopews*Xs)) - np.sum(pos_slopews)*np.sum(Xs)) / (n*np.sum(pos_slopews**2) - np.sum(pos_slopews)**2)
     return freqs[index_w0]/(2*R+2*z0) * partX
 
+def plot_smith(ax, reals, ims, c, magn_db, c_spes):
+    """ ax must be projection=smith """
+    vals_s11 = (reals + ims * 1j)
+    min_index = np.argmin(magn_db)
+    plots = ax.plot(vals_s11, markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
+    plots[0].set(color=c)
+    plots = ax.plot(vals_s11[min_index], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
+    plots[0].set(color=c_spes, marker="o")
+
 """ SINGLE LOOP COIL PLOTS AND MEASUREMENTS """
 show_single_plots = True
-print_Qs_single = True
+print_Qs_single = False
 freqs1, reals1, ims1, magn1, phase1 = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
 freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_singleloop_no_load_pult_narrow.s2p")
 
@@ -120,14 +129,10 @@ c2 = "orange"
 plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], [phase1, phase2], magn_colors=[c1,c2], phase_colors=[c1,c2], show_phase=False, names=["elbow load", "no load"])
 ax2 = fig.add_subplot(2,1,2, projection="smith")
 # Plotting smith charts
-for freqs, reals, ims, c, magn_db, c_spes in [(freqs1, reals1, ims1, c1, magn1_db, "turquoise"), 
-                               (freqs2, reals2, ims2, c2, magn2_db, "red")]:
-    vals_s11 = (reals + ims * 1j)
-    plots = ax2.plot(vals_s11, markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
-    plots[0].set(color=c)
-    min_index = plot_res(ax=ax1, magn_db=magn_db, freqs=freqs, color=c_spes)
-    plots = ax2.plot(vals_s11[min_index], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
-    plots[0].set(color=c_spes, marker="o")
+min_index = plot_res(ax=ax1, magn_db=magn1_db, freqs=freqs1, color="turquoise")
+plot_smith(ax=ax2, reals=reals1, ims=ims1, c=c1, magn_db=magn1_db, c_spes="turquoise")
+min_index = plot_res(ax=ax1, magn_db=magn2_db, freqs=freqs2, color="red")
+plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c2, magn_db=magn2_db, c_spes="red")
     
 ax1.legend()
 fig.suptitle("Laboratory tests of the single loop coil \n loaded and unloaded")
@@ -146,7 +151,7 @@ if print_Qs_single:
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = False
+show_quad_plots = True
 save = False
 print_impedance = False
 print_Qs_quad = True
@@ -157,8 +162,11 @@ values_first_loaded = extract_vals_2p(folder, "2-port_quadloop_elbow_load_pult_n
 values_switch_loaded = extract_vals_2p(folder, "2-port_quadloop_elbow_load_pult_switch_narrow.s2p")
 
 fig = plt.figure(figsize=[8, 6])
+smithfig = plt.figure(figsize=[6,6])
+smithax = smithfig.add_subplot(1,1,1, projection="smith")
 Qs = []
 i=1
+colors = [("lightcoral", "tomato"), ("mediumpurple", "blueviolet")]
 for values_first, values_switch in [(values_first_unloaded, values_switch_unloaded), 
                                     (values_first_loaded, values_switch_loaded)]:
     ax = fig.add_subplot(1,2,i)
@@ -183,7 +191,7 @@ for values_first, values_switch in [(values_first_unloaded, values_switch_unload
         plt.savefig('s11_s21_smith_quadrature_unloaded.png', transparent=True)
         plt.savefig('s11_s21_smith_quadrature_loaded.png', transparent=True)
 
-    # f, r_s11, i_s11, |S11|, phaseS11, r_s21, i_s21, |S21|, phaseS21
+    # f, r_s11, i_s11, dB|S11|, phaseS11, r_s21, i_s21, dB|S21|, phaseS21
     if print_impedance:
         print(f"Impedance [Ohm] at resonance for quadrature coils: ")
         print(values_first[min_i_first, 1]*50+50, values_first[min_i_first, 2]*50)
@@ -191,8 +199,13 @@ for values_first, values_switch in [(values_first_unloaded, values_switch_unload
 
     Q_first = q_factor(values_first[0], values_first[3], values_first[1], values_first[2], z0=50)
     Q_switch = q_factor(values_switch[0], values_switch[3], values_switch[1], values_switch[2], z0=50)
-    i=i+1
     Qs.append((Q_switch+Q_first)/2)
+
+    # plot_smith(ax=smithax, reals=values_first[1], ims=values_first[2], 
+    #            c=colors[i-1][0], magn_db=values_first[3], c_spes=colors[i-1][0])
+    # plot_smith(ax=smithax, reals=values_switch[1], ims=values_switch[2], 
+    #         c=colors[i-1][1], magn_db=values_switch[3], c_spes=colors[i-1][1])
+    i=i+1
 
 if print_Qs_quad:
     print("Q of quadrature coils:") 
