@@ -86,7 +86,7 @@ def plot_res(ax, magn_db, freqs, color):
     min_index = np.argmin(magn_db)
     min_db = magn_db[min_index]
     #print(freqs[min_index], color)
-    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db:.0f}dB", marker=".")
+    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db:.0f}dB, {freqs1[min_index]:.2f}MHz", marker=".")
     plots[0].set(color=color, marker = "o")
     return min_index
 
@@ -116,20 +116,34 @@ def plot_smith(ax, reals, ims, c, magn_db, c_spes):
 """ SINGLE LOOP COIL PLOTS AND MEASUREMENTS """
 show_single_plots = True
 print_Qs_single = False
-freqs1, reals1, ims1, magn1, phase1 = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
+
+num_files=10
+for i in range(num_files):
+    file_path = "single_loop/2MHz"+f"ketchup4na{i}.s1p"
+    f, re, im, mag, ph = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
+    if i==0:
+        data = np.zeros((num_files,5,len(f)))
+    data[i] = np.array([f, re, im, mag, ph])
+freqs1, reals1, ims1, magn1, phase1 = np.mean(data[:,0], axis=0), np.mean(data[:,1], axis=0), np.mean(data[:,2], axis=0), np.mean(data[:,3], axis=0), np.mean(data[:,4], axis=0)
+
 freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_singleloop_no_load_pult_narrow.s2p")
+print(freqs2.shape)
 
 magn1_db = 20*np.log10(magn1)
+std_magn1_db = np.std(20*np.log10(data[:,3]), axis=0)
+mean_std = np.mean(std_magn1_db)
 magn2_db = 20*np.log10(magn2)
 fig = plt.figure(figsize=[6, 10])
 ax1 = fig.add_subplot(2,1,1)
-ax1.vlines(x=[33.8], ymin=-42, ymax=1, colors="k", linestyles="--", label="f0=33.8MHz")
+ax1.vlines(x=[33.78], ymin=-42, ymax=1, colors="k", linestyles="--", label="f0=33.78MHz")
 c1 = "steelblue"
 c2 = "orange"
 plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], [phase1, phase2], magn_colors=[c1,c2], phase_colors=[c1,c2], show_phase=False, names=["elbow load", "no load"])
+#ax1.errorbar(freqs1, magn1_db, std_magn1_db)# plt.errorbar(x, y, e, linestyle='None', marker='^')
 ax2 = fig.add_subplot(2,1,2, projection="smith")
 # Plotting smith charts
 min_index = plot_res(ax=ax1, magn_db=magn1_db, freqs=freqs1, color="turquoise")
+print(f"STD for loaded curve resonance point: {std_magn1_db[min_index]*1e16:.2f}E-15 dB")
 plot_smith(ax=ax2, reals=reals1, ims=ims1, c=c1, magn_db=magn1_db, c_spes="turquoise")
 min_index = plot_res(ax=ax1, magn_db=magn2_db, freqs=freqs2, color="red")
 plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c2, magn_db=magn2_db, c_spes="red")
@@ -151,7 +165,7 @@ if print_Qs_single:
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = True
+show_quad_plots = False
 save = False
 print_impedance = False
 print_Qs_quad = True
@@ -197,14 +211,14 @@ for values_first, values_switch in [(values_first_unloaded, values_switch_unload
         print(values_first[min_i_first, 1]*50+50, values_first[min_i_first, 2]*50)
         print(values_switch[min_i_switch, 1]*50+50, values_switch[min_i_switch, 2]*50)
 
-    Q_first = q_factor(values_first[0], values_first[3], values_first[1], values_first[2], z0=50)
-    Q_switch = q_factor(values_switch[0], values_switch[3], values_switch[1], values_switch[2], z0=50)
+    Q_first = q_factor(values_first[:,0], values_first[:,3], values_first[:,1], values_first[:,2], z0=50)
+    Q_switch = q_factor(values_switch[:,0], values_switch[:,3], values_switch[:,1], values_switch[:,2], z0=50)
     Qs.append((Q_switch+Q_first)/2)
 
-    # plot_smith(ax=smithax, reals=values_first[1], ims=values_first[2], 
-    #            c=colors[i-1][0], magn_db=values_first[3], c_spes=colors[i-1][0])
-    # plot_smith(ax=smithax, reals=values_switch[1], ims=values_switch[2], 
-    #         c=colors[i-1][1], magn_db=values_switch[3], c_spes=colors[i-1][1])
+    plot_smith(ax=smithax, reals=values_first[:,1], ims=values_first[:,2], 
+               c=colors[i-1][0], magn_db=values_first[:,3], c_spes=colors[i-1][0])
+    plot_smith(ax=smithax, reals=values_switch[:,1], ims=values_switch[:,2], 
+            c=colors[i-1][1], magn_db=values_switch[:,3], c_spes=colors[i-1][1])
     i=i+1
 
 if print_Qs_quad:
