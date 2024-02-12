@@ -14,7 +14,7 @@ from smithplot import SmithAxes
 folder_nanovna = "/Users/marialsaker/nanovnasaver_files/"
 folder_pocketvna = "/Users/marialsaker/pocketVNAfiles/"
 
-def extract_vals_1p(file_path):
+def extract_vals_s1p(file_path):
     freqs = []
     reals = []
     ims = []
@@ -25,21 +25,34 @@ def extract_vals_1p(file_path):
             freqs.append(float(linevals[0])*1E-6)
             reals.append(float(linevals[1]))
             ims.append(float(linevals[2]))
+    vals = from_freim_to_five(freqs, reals, ims)
+    return vals[0], vals[1], vals[2], vals[3], vals[4] # f, r_s11, i_s11, |S11|, phaseS11
 
+def from_freim_to_five(freqs, reals, ims, db=False):
     freqs = np.array(freqs)
     reals = np.array(reals)
     ims = np.array(ims)
-    magn = np.sqrt(reals**2 + ims**2)
+    if db:
+        magn = 20*np.log10(np.sqrt(reals**2 + ims**2))
+    else: magn = np.sqrt(reals**2 + ims**2)
     phase = np.arctan(ims/reals)
-    return freqs, reals, ims, magn, phase
+    return np.array([freqs, reals, ims, magn, phase]) # f, r_s11, i_s11, |S11|, phaseS11
 
-def extract_vals_2p(file_path):
-    vals = np.zeros((101, 9))
+def extract_vals_s2p_simple(file_path, len_file=301):
+    vals = np.zeros((len_file, 9))
     with open(file_path) as f_s11:
+        miss = 0
         for i, line in enumerate(f_s11.readlines()):
-            if line.split(" ")[0] == "#": continue
-            i = i-1
+            if line.split(" ")[0] == "#" or line.split(" ")[0] == "!": 
+                miss = miss+1 
+                continue
+            i = i-miss
             linevals= line.split(" ") # f, r_s11, i_s11, r_s21, i_s21, _, __, ___, ____
+            new_linevals = []
+            for val in linevals:
+                if val != "":
+                    new_linevals.append(val)
+            linevals = new_linevals
             vals[i][0] = float(linevals[0])*1E-6
             vals[i][1:3] = linevals[1], linevals[2] 
             vals[i][5:7] = linevals[3], linevals[4]
@@ -48,6 +61,25 @@ def extract_vals_2p(file_path):
     vals[:,7] = np.sqrt(vals[:,5]**2 + vals[:,6]**2)
     vals[:,8] = np.arctan(vals[:,6]/(vals[:,5]))
     return vals # f, r_s11, i_s11, |S11|, phaseS11, r_s21, i_s21, |S21|, phaseS21
+
+def extract_vals_s2p_allS(file_path, len_file=301):
+    vals = np.zeros((len_file, 9))
+    with open(file_path) as f_s11:
+        miss = 0
+        for i, line in enumerate(f_s11.readlines()):
+            if line.split(" ")[0] == "#" or line.split(" ")[0] == "!": 
+                miss = miss+1 
+                continue
+            i = i-miss
+            linevals= line.split(" ") # f, r_s11, i_s11, r_s21, i_s21, _, __, ___, ____
+            new_linevals = []
+            for val in linevals:
+                if val != "" and val != "\n":
+                    new_linevals.append(val)
+            linevals = np.array(new_linevals)
+            linevals = np.float64(linevals)
+            vals[i] = linevals
+    return vals # f, r_s11, i_s11, r_s21, i_s21, r_s12, i_s12, r_s22, i_s22
 
 def plot_magn_phase(ax, freq_lists, magn_db_lists, phase_list, magn_colors, phase_colors, show_phase=True, names="S11"):
     for i, freqs in enumerate(freq_lists):
@@ -83,11 +115,21 @@ def plot_s11_s21(ax, freq_lists, s11_db_lists, s21_lists, s11_colors, s21_colors
     ax.grid(which="both")
     return
 
+def plot_Sparams(ax, freqs, s11, s21, s12, s22, colors, names):
+    for i, ss in enumerate([s11, s21, s12, s22]):
+        plots = ax.plot(freqs, (ss[3]), label=f"{names[i]}")#, marker=".")
+        plots[0].set(color = colors[i])
+        ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+    ax.set_xlabel("Frequency [MHz]")
+    ax.set_ylabel("Magnitude [dB]")
+    ax.grid(which="both")
+    return
+
 def plot_res(ax, magn_db, freqs, color):
     min_index = np.argmin(magn_db)
     min_db = magn_db[min_index]
     #print(freqs[min_index], color)
-    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db:.0f}dB, {freqs1[min_index]:.2f}MHz", marker=".")
+    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db:.0f}dB, {freqs[min_index]:.2f}MHz", marker=".")
     plots[0].set(color=color, marker = "o")
     return min_index
 
@@ -114,34 +156,64 @@ def plot_smith(ax, reals, ims, c, magn_db, c_spes):
     plots = ax.plot(vals_s11[min_index], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
     plots[0].set(color=c_spes, marker="o")
 
-def find_mean(num_files, file_path, filename, ending=".s1p"):
+def find_mean(num_files, file_path, filename, ending=".s1p", file_len = 301, allS=False):
     for i in range(num_files):
         this_file = file_path+f"{filename}{i}{ending}"
         if ending==".s1p":
-            f, re, im, mag, ph = extract_vals_1p(this_file)
+            f, re, im, mag, ph = extract_vals_s1p(this_file)
             if i==0:
                 # f, r_s11, i_s11, |S11|, phaseS11,
                 data = np.zeros((num_files,5,len(f)))
             data[i] = np.array([f, re, im, mag, ph])
         else:
-            vals=extract_vals_2p(this_file)
+            if allS:
+                vals = extract_vals_s2p_allS(this_file, len_file=file_len)
+            else:
+                vals = extract_vals_s2p_simple(this_file, len_file=file_len)
+            vals = vals.transpose()
             if i==0:
                 # f, r_s11, i_s11, |S11|, phaseS11, r_s21, i_s21, |S21|, phaseS21
-                data = np.zeros((num_files,9,len(f))) 
-            data[i] = vals
+                data = np.zeros((num_files,9,len(vals[0]))) 
+            data[i] = vals 
+    std_magn_db = 0
     mean_data = np.mean(data, axis=0)
     std_data = np.std(data, axis=0)
     return mean_data, std_data
 
+def find_mean_allS(num_files, file_path, filename, ending=".s2p", file_len = 301):
+    magn_desibels = np.zeros((2,num_files,file_len))
+    for i in range(num_files):
+        this_file = file_path+f"{filename}{i}{ending}"
+        vals = extract_vals_s2p_allS(this_file, len_file=file_len)
+        vals = vals.transpose()
+        if i==0:
+            # f, r_s11, i_s11, r_s21, i_s21, r_s12, i_s12, r_s22, i_s22
+            data = np.zeros((num_files,9,len(vals[0]))) 
+        data[i] = vals 
+        magn_desibels[0][i] = 20*np.log10( np.sqrt(vals[1]**2+vals[2]**2) )
+        magn_desibels[1][i] = 20*np.log10( np.sqrt(vals[7]**2+vals[8]**2) )
+    std_magn_db = [np.std(magn_desibels[0], axis=0), np.std(magn_desibels[0], axis=0)]
+    mean_data = np.mean(data, axis=0)
+    std_data = np.std(data, axis=0)
+    return mean_data, std_magn_db
+
+def uncertainty_magn_db(reals, ims, std_reals, std_ims):
+    magn = np.sqrt(reals**2 + ims**2)
+    s_x = np.sqrt(2)*std_reals/reals
+    s_y = np.sqrt(2)*std_ims/ims
+    s_magn = magn * 1/2 * (np.sqrt(s_x**2+s_y**2)/(reals**2+ims**2))
+    print(np.max(s_magn))
+    s_magn_db = 20*0.434*(s_magn / magn)
+    return s_magn_db
+
 """ SINGLE LOOP COIL PLOTS AND MEASUREMENTS """
-show_single_plots = True
+show_single_plots = False
 print_Qs_single = False
 
-mean_data, std_data = find_mean(num_files=10, file_path=folder_nanovna+"single_loop/2MHz/", filename="ketchup4na")
-freqs1, reals1, ims1, magn1, phase1 = mean_data[0], mean_data[1], mean_data[2], mean_data[3], mean_data[4]
-
-freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder_nanovna+"1-port_singleloop_no_load_pult_narrow.s2p")
-print(freqs2.shape)
+mean_data1, std_data1 = find_mean(num_files=10, file_path = folder_pocketvna+"Single_loop/", filename="idun4na", ending=".s2p")
+freqs1, reals1, ims1, magn1, phase1 = mean_data1[0], mean_data1[1], mean_data1[2], mean_data1[3], mean_data1[4]
+mean_data2, std_data2 = find_mean(num_files=10, file_path = folder_pocketvna+"Single_loop/", filename="noload", ending=".s2p")
+freqs2, reals2, ims2, magn2, phase2 = mean_data2[0], mean_data2[1], mean_data2[2], mean_data2[3], mean_data2[4]
 
 magn1_db = 20*np.log10(magn1)
 magn2_db = 20*np.log10(magn2)
@@ -176,66 +248,78 @@ if print_Qs_single:
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = True
+show_quad_plots = False
 save = False
 print_impedance = False
-print_Qs_quad = True
+print_Qs_quad = False
 
-values_first_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_narrow.s2p")
-values_switch_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_switch_narrow.s2p")
-values_first_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_narrow.s2p")
-values_switch_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_switch_narrow.s2p")
+# values_first_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_narrow.s2p", len_file=101)
+# values_switch_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_switch_narrow.s2p", len_file=101)
+# values_first_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_narrow.s2p", len_file=101)
+# values_switch_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_switch_narrow.s2p", len_file=101)
+#values_loaded_quad = find_mean(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="idun4na", ending=".s2p", file_len=1001, allS=True) #extract_vals_s2p_allS(file_path=folder_pocketvna+"Quad_loop/idun4na1.s2p", len_file=1001).transpose(), 0
+#values_unloaded_quad = find_mean(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="noload", ending=".s2p", file_len=1001, allS=True)
+values_unloaded_quad = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="noload", file_len=1001)
+
+values_loaded_quad = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="idun4na", file_len=1001)
 
 fig = plt.figure(figsize=[8, 6])
 smithfig = plt.figure(figsize=[6,6])
 smithax = smithfig.add_subplot(1,1,1, projection="smith")
 Qs = []
-i=1
-colors = [("lightcoral", "tomato"), ("mediumpurple", "blueviolet")]
-for values_first, values_switch in [(values_first_unloaded, values_switch_unloaded), 
-                                    (values_first_loaded, values_switch_loaded)]:
-    ax = fig.add_subplot(1,2,i)
-    values_first[:,3] = 20*np.log10(values_first[:,3])
-    values_first[:,7] = 20*np.log10(values_first[:,7])
-    values_switch[:,3] = 20*np.log10(values_switch[:,3])
-    values_switch[:,7] = 20*np.log10(values_switch[:,7])
+colors1 = ["lightcoral", "silver", "dimgray", "blue"]
+colors2 = ["tomato", "silver", "dimgray", "steelblue"]
+loadTF = ["ketchup + 4Na", "nothing"]
+for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
+    print(f"*** Load = {loadTF[i]} ***")
+    ax = fig.add_subplot(1,2,i+1)
+    freqs_q = values[0][0]*1E-6
+    s_11s = from_freim_to_five(freqs_q, values[0][1], values[0][2], db=True)# f, r_s11, i_s11, |S11|, phaseS11
+    s_21s = from_freim_to_five(freqs_q, values[0][3], values[0][4], db=True)# f, r_s21, i_s21, |S21|, phaseS21
+    s_12s = from_freim_to_five(freqs_q, values[0][5], values[0][6], db=True)# f, r_s12, i_s12, |S12|, phaseS12
+    s_22s = from_freim_to_five(freqs_q, values[0][7], values[0][8], db=True)# f, r_s22, i_s22, |S22|, phaseS22
     ax.vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f0=33.78MHz")
-    if i==1:
-        names = ["no load", "no load switch"]
+    if i==0:
+        names = ["s_11 load", "s_21 load", "s_12 load", "s_22 load"]
+        colors = colors1
     else:
-        names = ["elbow load", "elbow load switch"]
-    plot_s11_s21(ax=ax, freq_lists=[values_first[:,0], values_switch[:,0]], 
-                    s11_db_lists=[values_first[:,3], values_switch[:,3]], s11_colors=["steelblue", "orange"],
-                    s21_lists=[values_first[:,7], values_switch[:,7]], s21_colors=["turquoise", "salmon"],
-                    names=names)
-    min_i_first = plot_res(ax, magn_db=values_first[:,3], freqs=values_first[:,0], color="darkblue")
-    min_i_switch = plot_res(ax, magn_db=values_switch[:,3], freqs=values_switch[:,0], color="orangered")
-    ax.set_title(f"S11 and S12 magnitudes for both connections,\nquadrature coil had {names[0]}")
+        names = ["s_11 noload", "s_21 noload", "s_12 noload", "s_22 noload"]
+        colors = colors2
+    plot_Sparams(ax=ax, freqs=freqs_q, s11=s_11s, s21=s_21s, s12=s_12s, s22=s_22s, colors=colors, names=names)
+    min_i_first = plot_res(ax, magn_db=(s_11s[3]), freqs=freqs_q, color="red")
+    min_i_switch = plot_res(ax, magn_db=(s_22s[3]), freqs=freqs_q, color="darkblue")
+    print(f"Minimums indexes = {min_i_first}, {min_i_switch}")
+    ax.set_title(f"S parameter magnitudes,\nquadrature coil had {loadTF[i]}")
     ax.legend()
     if save:    
         plt.savefig('s11_s21_smith_quadrature_unloaded.png', transparent=True)
         plt.savefig('s11_s21_smith_quadrature_loaded.png', transparent=True)
 
-    # f, r_s11, i_s11, dB|S11|, phaseS11, r_s21, i_s21, dB|S21|, phaseS21
     if print_impedance:
         print(f"Impedance [Ohm] at resonance for quadrature coils: ")
-        print(values_first[min_i_first, 1]*50+50, values_first[min_i_first, 2]*50)
-        print(values_switch[min_i_switch, 1]*50+50, values_switch[min_i_switch, 2]*50)
+        print(f"> ({s_11s[1, min_i_first]*50+50} + i {s_11s[2, min_i_first]*50}) Ohm")
+        print(f"> ({s_22s[1, min_i_switch]*50+50} + i {s_22s[2, min_i_switch]*50}) Ohm")
 
-    Q_first = q_factor(values_first[:,0], values_first[:,3], values_first[:,1], values_first[:,2], z0=50)
-    Q_switch = q_factor(values_switch[:,0], values_switch[:,3], values_switch[:,1], values_switch[:,2], z0=50)
+    Q_first = q_factor(freqs=freqs_q, magn_db=(s_11s[3]), reals=s_11s[1], ims=s_11s[2], z0=50)
+    Q_switch = q_factor(freqs=freqs_q, magn_db=(s_22s[3]), reals=s_22s[1], ims=s_22s[2], z0=50)
     Qs.append((Q_switch+Q_first)/2)
 
-    plot_smith(ax=smithax, reals=values_first[:,1], ims=values_first[:,2], 
-               c=colors[i-1][0], magn_db=values_first[:,3], c_spes=colors[i-1][0])
-    plot_smith(ax=smithax, reals=values_switch[:,1], ims=values_switch[:,2], 
-            c=colors[i-1][1], magn_db=values_switch[:,3], c_spes=colors[i-1][1])
-    i=i+1
+    plot_smith(ax=smithax, reals=s_11s[1], ims=s_11s[2], 
+               c=colors[0], magn_db=(s_11s[3]), c_spes="red")
+    plot_smith(ax=smithax, reals=s_22s[1], ims=s_22s[2], 
+               c=colors[-1], magn_db=(s_22s[3]), c_spes="darkblue")
+    diffs = [freqs_q[i+1]-freqs_q[i] for i in range(len(freqs_q)-1)]
+    mean_diff = np.mean(diffs)
+    print(f"Uncertainties for magnitude of {loadTF[i]} at resonance: ",
+          f"\n> u_f0 = {mean_diff} MHz",
+          f"\n> u_s11 = {values[1][0][min_i_first]:.1f} dB ",
+          f"\n> u_s22 = {values[1][1][min_i_switch]:.1f} dB")
 
 if print_Qs_quad:
-    print("Q of quadrature coils:") 
-    print(f"Q, mean unloaded = {Qs[0]} \nQ, mean loaded = {Qs[1]}") # Unloaded -11.4433
-    print(f"> Q ratio = {Qs[0]/Qs[1]}")
+    print("\nQ of quadrature coil:") 
+    print(f"Q, mean loaded = {Qs[0]} \nQ, mean unloaded = {Qs[1]}") # Unloaded -11.4433
+    print(f"> Q ratio = {Qs[1]/Qs[0]}")
 
+# f, r_s11, i_s11, r_s21, i_s21, r_s12, i_s12, r_s22, i_s22
 if show_quad_plots:
     plt.show()
