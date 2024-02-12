@@ -11,13 +11,14 @@ collections.MutableMapping = collections.abc.MutableMapping
 #import hyper
 from smithplot import SmithAxes
 
-folder = "/Users/marialsaker/nanovnasaver_files/"
+folder_nanovna = "/Users/marialsaker/nanovnasaver_files/"
+folder_pocketvna = "/Users/marialsaker/pocketVNAfiles/"
 
-def extract_vals_1p(folder, file):
+def extract_vals_1p(file_path):
     freqs = []
     reals = []
     ims = []
-    with open(folder+file) as f_s11:
+    with open(file_path) as f_s11:
         for line in f_s11.readlines():
             if line.split(" ")[0] == "#": continue
             linevals = line.split(" ")
@@ -32,9 +33,9 @@ def extract_vals_1p(folder, file):
     phase = np.arctan(ims/reals)
     return freqs, reals, ims, magn, phase
 
-def extract_vals_2p(folder, file):
+def extract_vals_2p(file_path):
     vals = np.zeros((101, 9))
-    with open(folder+file) as f_s11:
+    with open(file_path) as f_s11:
         for i, line in enumerate(f_s11.readlines()):
             if line.split(" ")[0] == "#": continue
             i = i-1
@@ -113,25 +114,36 @@ def plot_smith(ax, reals, ims, c, magn_db, c_spes):
     plots = ax.plot(vals_s11[min_index], markevery=1, label="equipoints=11", equipoints=11, datatype=SmithAxes.S_PARAMETER)
     plots[0].set(color=c_spes, marker="o")
 
+def find_mean(num_files, file_path, filename, ending=".s1p"):
+    for i in range(num_files):
+        this_file = file_path+f"{filename}{i}{ending}"
+        if ending==".s1p":
+            f, re, im, mag, ph = extract_vals_1p(this_file)
+            if i==0:
+                # f, r_s11, i_s11, |S11|, phaseS11,
+                data = np.zeros((num_files,5,len(f)))
+            data[i] = np.array([f, re, im, mag, ph])
+        else:
+            vals=extract_vals_2p(this_file)
+            if i==0:
+                # f, r_s11, i_s11, |S11|, phaseS11, r_s21, i_s21, |S21|, phaseS21
+                data = np.zeros((num_files,9,len(f))) 
+            data[i] = vals
+    mean_data = np.mean(data, axis=0)
+    std_data = np.std(data, axis=0)
+    return mean_data, std_data
+
 """ SINGLE LOOP COIL PLOTS AND MEASUREMENTS """
 show_single_plots = True
 print_Qs_single = False
 
-num_files=10
-for i in range(num_files):
-    file_path = "single_loop/2MHz"+f"ketchup4na{i}.s1p"
-    f, re, im, mag, ph = extract_vals_1p(folder, "1-port_singleloop_elbow_load_pult_narrow.s1p")
-    if i==0:
-        data = np.zeros((num_files,5,len(f)))
-    data[i] = np.array([f, re, im, mag, ph])
-freqs1, reals1, ims1, magn1, phase1 = np.mean(data[:,0], axis=0), np.mean(data[:,1], axis=0), np.mean(data[:,2], axis=0), np.mean(data[:,3], axis=0), np.mean(data[:,4], axis=0)
+mean_data, std_data = find_mean(num_files=10, file_path=folder_nanovna+"single_loop/2MHz/", filename="ketchup4na")
+freqs1, reals1, ims1, magn1, phase1 = mean_data[0], mean_data[1], mean_data[2], mean_data[3], mean_data[4]
 
-freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder, "1-port_singleloop_no_load_pult_narrow.s2p")
+freqs2, reals2, ims2, magn2, phase2 = extract_vals_1p(folder_nanovna+"1-port_singleloop_no_load_pult_narrow.s2p")
 print(freqs2.shape)
 
 magn1_db = 20*np.log10(magn1)
-std_magn1_db = np.std(20*np.log10(data[:,3]), axis=0)
-mean_std = np.mean(std_magn1_db)
 magn2_db = 20*np.log10(magn2)
 fig = plt.figure(figsize=[6, 10])
 ax1 = fig.add_subplot(2,1,1)
@@ -143,7 +155,6 @@ plot_magn_phase(ax1, [freqs1, freqs2], [magn1_db, magn2_db], [phase1, phase2], m
 ax2 = fig.add_subplot(2,1,2, projection="smith")
 # Plotting smith charts
 min_index = plot_res(ax=ax1, magn_db=magn1_db, freqs=freqs1, color="turquoise")
-print(f"STD for loaded curve resonance point: {std_magn1_db[min_index]*1e16:.2f}E-15 dB")
 plot_smith(ax=ax2, reals=reals1, ims=ims1, c=c1, magn_db=magn1_db, c_spes="turquoise")
 min_index = plot_res(ax=ax1, magn_db=magn2_db, freqs=freqs2, color="red")
 plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c2, magn_db=magn2_db, c_spes="red")
@@ -165,15 +176,15 @@ if print_Qs_single:
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = False
+show_quad_plots = True
 save = False
 print_impedance = False
 print_Qs_quad = True
 
-values_first_unloaded = extract_vals_2p(folder, "2-port_quadloop_no_load_pult_narrow.s2p")
-values_switch_unloaded = extract_vals_2p(folder, "2-port_quadloop_no_load_pult_switch_narrow.s2p")
-values_first_loaded = extract_vals_2p(folder, "2-port_quadloop_elbow_load_pult_narrow.s2p")
-values_switch_loaded = extract_vals_2p(folder, "2-port_quadloop_elbow_load_pult_switch_narrow.s2p")
+values_first_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_narrow.s2p")
+values_switch_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_switch_narrow.s2p")
+values_first_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_narrow.s2p")
+values_switch_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_switch_narrow.s2p")
 
 fig = plt.figure(figsize=[8, 6])
 smithfig = plt.figure(figsize=[6,6])
@@ -188,7 +199,7 @@ for values_first, values_switch in [(values_first_unloaded, values_switch_unload
     values_first[:,7] = 20*np.log10(values_first[:,7])
     values_switch[:,3] = 20*np.log10(values_switch[:,3])
     values_switch[:,7] = 20*np.log10(values_switch[:,7])
-    ax.vlines(x=[33.8],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f0=33.8MHz")
+    ax.vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f0=33.78MHz")
     if i==1:
         names = ["no load", "no load switch"]
     else:
