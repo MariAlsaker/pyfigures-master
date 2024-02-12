@@ -129,7 +129,7 @@ def plot_res(ax, magn_db, freqs, color):
     min_index = np.argmin(magn_db)
     min_db = magn_db[min_index]
     #print(freqs[min_index], color)
-    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db:.0f}dB, {freqs[min_index]:.2f}MHz", marker=".")
+    plots = ax.plot(freqs[min_index], min_db, label=f"min= {min_db:.0f}dB, {freqs[min_index]:.3f}MHz", marker=".")
     plots[0].set(color=color, marker = "o")
     return min_index
 
@@ -248,22 +248,16 @@ if print_Qs_single:
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = False
+show_quad_plots = True
 save = False
-print_impedance = False
-print_Qs_quad = False
+print_impedance = True
+print_Qs_quad = True
 
-# values_first_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_narrow.s2p", len_file=101)
-# values_switch_unloaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_no_load_pult_switch_narrow.s2p", len_file=101)
-# values_first_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_narrow.s2p", len_file=101)
-# values_switch_loaded = extract_vals_2p(folder_nanovna+"2-port_quadloop_elbow_load_pult_switch_narrow.s2p", len_file=101)
-#values_loaded_quad = find_mean(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="idun4na", ending=".s2p", file_len=1001, allS=True) #extract_vals_s2p_allS(file_path=folder_pocketvna+"Quad_loop/idun4na1.s2p", len_file=1001).transpose(), 0
-#values_unloaded_quad = find_mean(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="noload", ending=".s2p", file_len=1001, allS=True)
 values_unloaded_quad = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="noload", file_len=1001)
 
 values_loaded_quad = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="idun4na", file_len=1001)
 
-fig = plt.figure(figsize=[8, 6])
+figs = plt.figure(figsize=[7, 6]), plt.figure(figsize=[7, 6])
 smithfig = plt.figure(figsize=[6,6])
 smithax = smithfig.add_subplot(1,1,1, projection="smith")
 Qs = []
@@ -272,28 +266,29 @@ colors2 = ["tomato", "silver", "dimgray", "steelblue"]
 loadTF = ["ketchup + 4Na", "nothing"]
 for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     print(f"*** Load = {loadTF[i]} ***")
-    ax = fig.add_subplot(1,2,i+1)
+    ax = figs[i].add_subplot(1,1,1)
     freqs_q = values[0][0]*1E-6
     s_11s = from_freim_to_five(freqs_q, values[0][1], values[0][2], db=True)# f, r_s11, i_s11, |S11|, phaseS11
     s_21s = from_freim_to_five(freqs_q, values[0][3], values[0][4], db=True)# f, r_s21, i_s21, |S21|, phaseS21
     s_12s = from_freim_to_five(freqs_q, values[0][5], values[0][6], db=True)# f, r_s12, i_s12, |S12|, phaseS12
     s_22s = from_freim_to_five(freqs_q, values[0][7], values[0][8], db=True)# f, r_s22, i_s22, |S22|, phaseS22
-    ax.vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f0=33.78MHz")
+    ax.vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f=33.78MHz")
     if i==0:
         names = ["s_11 load", "s_21 load", "s_12 load", "s_22 load"]
         colors = colors1
     else:
-        names = ["s_11 noload", "s_21 noload", "s_12 noload", "s_22 noload"]
+        names = ["s_11 no load", "s_21 no load", "s_12 no load", "s_22 no load"]
         colors = colors2
     plot_Sparams(ax=ax, freqs=freqs_q, s11=s_11s, s21=s_21s, s12=s_12s, s22=s_22s, colors=colors, names=names)
     min_i_first = plot_res(ax, magn_db=(s_11s[3]), freqs=freqs_q, color="red")
     min_i_switch = plot_res(ax, magn_db=(s_22s[3]), freqs=freqs_q, color="darkblue")
     print(f"Minimums indexes = {min_i_first}, {min_i_switch}")
-    ax.set_title(f"S parameter magnitudes,\nquadrature coil had {loadTF[i]}")
+    ax.set_title(f"S parameter magnitudes,\nquadrature coil was loaded with {loadTF[i]}")
     ax.legend()
     if save:    
-        plt.savefig('s11_s21_smith_quadrature_unloaded.png', transparent=True)
-        plt.savefig('s11_s21_smith_quadrature_loaded.png', transparent=True)
+        figs[i].savefig(f"quad_magn_{i}.png", transparent=True)
+        if i ==1:
+            smithfig.savefig("quad_smith.png", transparent=True)
 
     if print_impedance:
         print(f"Impedance [Ohm] at resonance for quadrature coils: ")
@@ -301,7 +296,9 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
         print(f"> ({s_22s[1, min_i_switch]*50+50} + i {s_22s[2, min_i_switch]*50}) Ohm")
 
     Q_first = q_factor(freqs=freqs_q, magn_db=(s_11s[3]), reals=s_11s[1], ims=s_11s[2], z0=50)
+    print("q first", Q_first)
     Q_switch = q_factor(freqs=freqs_q, magn_db=(s_22s[3]), reals=s_22s[1], ims=s_22s[2], z0=50)
+    print("q_switch", Q_switch)
     Qs.append((Q_switch+Q_first)/2)
 
     plot_smith(ax=smithax, reals=s_11s[1], ims=s_11s[2], 
@@ -310,7 +307,7 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
                c=colors[-1], magn_db=(s_22s[3]), c_spes="darkblue")
     diffs = [freqs_q[i+1]-freqs_q[i] for i in range(len(freqs_q)-1)]
     mean_diff = np.mean(diffs)
-    print(f"Uncertainties for magnitude of {loadTF[i]} at resonance: ",
+    print(f"Uncertainties for magnitude with load {loadTF[i]} at resonance: ",
           f"\n> u_f0 = {mean_diff} MHz",
           f"\n> u_s11 = {values[1][0][min_i_first]:.1f} dB ",
           f"\n> u_s22 = {values[1][1][min_i_switch]:.1f} dB")
