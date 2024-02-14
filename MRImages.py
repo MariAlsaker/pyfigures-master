@@ -1,6 +1,7 @@
 import scipy.io
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.widgets import Button
 import numpy as np
 
 def show_as_video(im_array, vmax:int=1, gif_name:str=None):
@@ -35,10 +36,53 @@ def show_as_video(im_array, vmax:int=1, gif_name:str=None):
         writergif = animation.FFMpegWriter(fps=30)
         ani.save("Figures/"+gif_name, writer=writergif)
 
-
 path = "/Users/marialsaker/MRImages/Single_loop/Exam13509/Series4/"
 
 mat = scipy.io.loadmat(path + "ScanArchive_NO1011MR01_20240209_082731323.mat")
 print(mat.keys())
-vals = mat['bb']
-show_as_video(vals)# gif_name="first_MRI.mp4")
+im_volume = mat['bb']
+im_volume = np.transpose(im_volume, (2,0,1)) # (x, y, z) = (0, 1, 2)
+
+abs_array = abs(im_volume)
+normalized_field_magn = abs_array/np.max(abs_array)
+
+# Initial display range
+display_range = 2
+current_index = 55
+
+# Create the initial plot
+fig, ax = plt.subplots()
+img = ax.imshow(normalized_field_magn[current_index], cmap="plasma", vmin=0, vmax=1) 
+cb = plt.colorbar(img, label="Normalized")
+ax.set_title(f"Magnitude of complex value")
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+
+# Function to update the plot with the next portion of data
+def update_plot(forward=True):
+    global current_index
+    step = display_range if forward else -display_range
+    current_index += step
+
+    if current_index < 0:
+        current_index = 0
+    elif current_index + display_range > normalized_field_magn.shape[0]-1:
+        current_index = normalized_field_magn.shape[0] - display_range
+
+    img.set_data(normalized_field_magn[current_index])
+    plt.draw()
+
+# Create buttons
+ax_next_button = plt.axes([0.81, 0.01, 0.1, 0.05])
+ax_prev_button = plt.axes([0.7, 0.01, 0.1, 0.05])
+
+next_button = Button(ax_next_button, 'Next')
+prev_button = Button(ax_prev_button, 'Previous')
+
+# Connect buttons to update functions
+next_button.on_clicked(lambda event: update_plot(forward=True))
+prev_button.on_clicked(lambda event: update_plot(forward=False))
+
+# Show the plot
+plt.show()
+

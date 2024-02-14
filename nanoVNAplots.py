@@ -10,9 +10,11 @@ collections.MutableMapping = collections.abc.MutableMapping
 #Now import hyper
 #import hyper
 from smithplot import SmithAxes
+import matplotlib as mpl
 
 folder_nanovna = "/Users/marialsaker/nanovnasaver_files/"
 folder_pocketvna = "/Users/marialsaker/pocketVNAfiles/"
+cmap = mpl.cm.get_cmap("plasma")
 
 def extract_vals_s1p(file_path):
     freqs = []
@@ -117,7 +119,7 @@ def plot_s11_s21(ax, freq_lists, s11_db_lists, s21_lists, s11_colors, s21_colors
 
 def plot_Sparams(ax, freqs, s11, s21, s12, s22, colors, names):
     for i, ss in enumerate([s11, s21, s12, s22]):
-        plots = ax.plot(freqs, (ss[3]), label=f"{names[i]}")#, marker=".")
+        plots = ax.plot(freqs, (ss[3]), label=names[i])#, marker=".")
         plots[0].set(color = colors[i])
         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
     ax.set_xlabel("Frequency [MHz]")
@@ -192,10 +194,11 @@ def find_mean_allS(num_files, file_path, filename, ending=".s2p", file_len = 301
         data[i] = vals 
         magn_desibels[0][i] = 20*np.log10( np.sqrt(vals[1]**2+vals[2]**2) )
         magn_desibels[1][i] = 20*np.log10( np.sqrt(vals[7]**2+vals[8]**2) )
-    std_magn_db = [np.std(magn_desibels[0], axis=0), np.std(magn_desibels[0], axis=0)]
+    std_magn_db = [np.std(magn_desibels[0], axis=0), np.std(magn_desibels[1], axis=0)]
+    mean_magn_db = [np.mean(magn_desibels[0], axis=0), np.mean(magn_desibels[1], axis=0)]
     mean_data = np.mean(data, axis=0)
     std_data = np.std(data, axis=0)
-    return mean_data, std_magn_db
+    return mean_data, std_magn_db, mean_magn_db
 
 def uncertainty_magn_db(reals, ims, std_reals, std_ims):
     magn = np.sqrt(reals**2 + ims**2)
@@ -238,6 +241,8 @@ ax2.set_title("Real and imaginary impedance (Smith chart)")
 #plt.savefig('s11_smith_singleloop.png', transparent=True)
 if show_single_plots:
     plt.show()
+else:
+    plt.close()
 Q_load = q_factor(freqs1, magn1_db, reals1, ims1, z0=50)
 Q_noload = q_factor(freqs2, magn2_db, reals2, ims2, z0=50)
 Q_ratio = Q_noload/Q_load
@@ -248,10 +253,10 @@ if print_Qs_single:
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = True
+show_quad_plots = False
 save = False
-print_impedance = True
-print_Qs_quad = True
+print_impedance = False
+print_Qs_quad = False
 
 values_unloaded_quad = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename="noload", file_len=1001)
 
@@ -261,8 +266,7 @@ figs = plt.figure(figsize=[7, 6]), plt.figure(figsize=[7, 6])
 smithfig = plt.figure(figsize=[6,6])
 smithax = smithfig.add_subplot(1,1,1, projection="smith")
 Qs = []
-colors1 = ["lightcoral", "silver", "dimgray", "blue"]
-colors2 = ["tomato", "silver", "dimgray", "steelblue"]
+colors = [cmap(0.2), "silver", "dimgray", cmap(0.8)]
 loadTF = ["ketchup + 4Na", "nothing"]
 for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     print(f"*** Load = {loadTF[i]} ***")
@@ -275,10 +279,8 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     ax.vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f=33.78MHz")
     if i==0:
         names = ["s_11 load", "s_21 load", "s_12 load", "s_22 load"]
-        colors = colors1
     else:
         names = ["s_11 no load", "s_21 no load", "s_12 no load", "s_22 no load"]
-        colors = colors2
     plot_Sparams(ax=ax, freqs=freqs_q, s11=s_11s, s21=s_21s, s12=s_12s, s22=s_22s, colors=colors, names=names)
     min_i_first = plot_res(ax, magn_db=(s_11s[3]), freqs=freqs_q, color="red")
     min_i_switch = plot_res(ax, magn_db=(s_22s[3]), freqs=freqs_q, color="darkblue")
@@ -320,3 +322,61 @@ if print_Qs_quad:
 # f, r_s11, i_s11, r_s21, i_s21, r_s12, i_s12, r_s22, i_s22
 if show_quad_plots:
     plt.show()
+else:
+    plt.close()
+
+""" HYBRID PLOTS AND MEASUREMENTS """
+
+hybrid_data = ["hybrid_setup1_isoSMA", "hybrid_setup6_isoBNC", "hybrid_setup2_through", "hybrid_setup3_through", 
+               "hybrid_setup4_through", "hybrid_setup5_through"]
+hybrid_setups = ["Hybrid, coil coax","Hybrid, MRI coax", "Hybrid through, green to same", "Hybrid through, green to opposite", 
+               "Hybrid through, blue to same", "Hybrid through, blue to opposite"]
+width, height = 9, 5
+rows, cols = 1, 2
+fig1 = plt.figure(figsize=[width, height])
+fig2 = plt.figure(figsize=[width, height])
+fig3 = plt.figure(figsize=[width, height])
+axs1 = fig1.subplots(rows, cols)
+axs2 = fig2.subplots(rows, cols)
+axs3 = fig3.subplots(rows, cols)
+colors = [cmap(0.2), cmap(0.4), cmap(0.6), cmap(0.8)]
+labels = ["s_11", "s_21", "s_12", "s_22"]
+axs = [axs1[0], axs1[1], axs2[0], axs2[1], axs3[0], axs3[1]]
+magn_at_res = np.zeros((len(hybrid_data), 4))
+phase_at_res = np.zeros((len(hybrid_data), 4))
+for i, name in enumerate(hybrid_data):
+    vals = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename=name, file_len=501)
+    freqs_h = vals[0][0]*1E-6
+    res = next(x for x, val in enumerate(freqs_h) if val > 33.775)
+    s_11s = from_freim_to_five(freqs_h, vals[0][1], vals[0][2], db=True)# f, r_s11, i_s11, |S11|, phaseS11
+    s_21s = from_freim_to_five(freqs_h, vals[0][3], vals[0][4], db=True)# f, r_s21, i_s21, |S21|, phaseS21
+    s_12s = from_freim_to_five(freqs_h, vals[0][5], vals[0][6], db=True)# f, r_s12, i_s12, |S12|, phaseS12
+    s_22s = from_freim_to_five(freqs_h, vals[0][7], vals[0][8], db=True)# f, r_s22, i_s22, |S22|, phaseS22
+    plot_Sparams(ax=axs[i], freqs=freqs_h, s11=s_11s, s21=s_21s, s12=s_12s, s22=s_22s, colors=colors, names=labels)
+    axs[i].vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f=33.78MHz")
+    axs[i].set_title(hybrid_setups[i])
+    axs[i].legend()
+    magn_at_res[i] = np.array((s_11s[3][res], s_21s[3][res], s_12s[3][res], s_22s[3][res]))
+    phase_at_res[i] = np.array((s_11s[4][res], s_21s[4][res], s_12s[4][res], s_22s[4][res]))
+
+c = 3E8
+len1 = 1.05
+len2 = 0.08
+perm = 1.1
+f = 33.78E6
+delay_s1 = len1 * np.sqrt(perm)/c
+eff_phase1 = 360*f*delay_s1
+delay_s2 = len2 * np.sqrt(perm)/c
+eff_phase2 = 360*f*delay_s2
+eff_phase = eff_phase1+eff_phase2
+print(eff_phase1)
+print(eff_phase2)
+print(labels)
+for i in range(len(hybrid_data)):
+    print("\n", hybrid_setups[i])
+    print(f"magnitude = {np.around(magn_at_res[i], decimals=2)}")
+    # if hybrid_setups[i].split(" ")[1] == "through,":
+    #     print(f"phase = {np.around(phase_at_res[i]/np.pi * 360 + eff_phase2, decimals=2)}")
+    # else:
+    print(f"phase = {np.around(phase_at_res[i]/np.pi * 360, decimals=2)}")
+plt.show()

@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 from matplotlib import ticker
+import matplotlib as mpl
 
 # Unicode: Ohm = \u03A9, degrees = \u00B0, mu = \u03BC
 # https://pythonforundergradengineers.com/unicode-characters-in-python.html 
@@ -38,9 +39,12 @@ def plot_magn_phase(ax, freqs, magns, phases, colors1, colors2, name="RLC"):
     ax.set_title(name)
     ax.grid(True)
 
+cmap = mpl.cm.get_cmap("plasma")
 # frequencies = np.linspace(50, 300, 10000)
-# colors1 = ['blue', 'green', 'purple']
-# colors2 = ['red', 'orange', 'magenta']
+# colors1 = [cmap(0.1), cmap(0.3), cmap(0.5)]
+# colors2 = [cmap(0.7), cmap(0.8), cmap(0.9)]
+# # colors1 = ['blue', 'green', 'purple']
+# # colors2 = ['red', 'orange', 'magenta']
 # resonance_freq = 160
 # Ls = np.array([100., 50., 100.])*1E-3 # Henry
 # Rs = [300., 300., 150.]
@@ -95,7 +99,7 @@ def diodeI(volts, Isat):
 # ax.set_ylim(bottom=-2, top=20)
 # ax.hlines(y=0, xmin=-1, xmax=0.5, colors="k")
 # ax.vlines(x=0, ymin=-2, ymax=21, colors="k")
-# ax.plot(volts, current, "m")
+# ax.plot(volts, current, color=cmap(0.5))
 # ax.set_title("Simple model of p-n junction behavior")
 # ax.set_xlabel("Volts [V]")
 # ax.set_ylabel("Current [A]")
@@ -130,8 +134,8 @@ longitude = longitudinal_M(ts, M0=M0, Mz0=0, T1=600E-3)
 transverse = transverse_M(ts, Mx0=M0, My0=0, T2=80E-3)
 print(transverse[0])
 print(M0)
-plt.plot(ts, longitude, label="Longitudinal")
-plt.plot(ts, transverse, label="Transverse") 
+plt.plot(ts, longitude, label="Longitudinal", color=cmap(0.3))
+plt.plot(ts, transverse, label="Transverse", color=cmap(0.7)) 
 plt.hlines(y=M0, xmin=0.00, xmax=3.0, colors="k", linestyles="--", label="M0")
 plt.title("Theoretical relaxation in white matter")
 plt.xlabel("Seconds [s]")
