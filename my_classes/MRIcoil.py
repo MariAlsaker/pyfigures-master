@@ -89,8 +89,8 @@ class MRIcoil:
             new_i = (indices[1], indices[0])
             indices = new_i
         ax.set(
-            xlabel=f"{coord_axs[indices[0]]}-position (cm)",
-            ylabel=f"{coord_axs[indices[1]]}-position (cm)")
+            xlabel=f"{coord_axs[indices[0]]}-position (mm)",
+            ylabel=f"{coord_axs[indices[1]]}-position (mm)")
         plt.tight_layout()
         if show:
             plt.show()
