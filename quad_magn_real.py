@@ -10,7 +10,7 @@ import utils
 
 # Creating my arc in 2D
 center = (0,0)
-radius = 10.3
+radius = 103
 x = np.linspace(center[0], center[0]+radius, 101, endpoint=True)
 arc = np.array([np.sqrt(radius**2 - (x-center[0])**2)+center[1], x])
 rot_angle = np.radians(90+45)
@@ -36,10 +36,10 @@ for i, slice in enumerate(slice_start_end):
     # vert_posarc = vertices_2coils[i][2]
     # vert_posneg = vertices_2coils[i][3]
     vertices_2coils[i][0], vertices_2coils[i][2] = np.zeros((3,11)), np.zeros((3,11)) # fra minus til pluss, fra pluss til minus
-    vertices_2coils[i][0][0], vertices_2coils[i][0][1], vertices_2coils[i][0][2] = np.ones((11))*-4.25, final_arc[0][slice[0]:slice[1]], final_arc[1][slice[0]:slice[1]]
-    vertices_2coils[i][2][0], vertices_2coils[i][2][1], vertices_2coils[i][2][2] = np.ones((11))*4.25, np.flip(final_arc[0][slice[0]:slice[1]]), np.flip(final_arc[1][slice[0]:slice[1]])
+    vertices_2coils[i][0][0], vertices_2coils[i][0][1], vertices_2coils[i][0][2] = np.ones((11))*-42.5, final_arc[0][slice[0]:slice[1]], final_arc[1][slice[0]:slice[1]]
+    vertices_2coils[i][2][0], vertices_2coils[i][2][1], vertices_2coils[i][2][2] = np.ones((11))*42.5, np.flip(final_arc[0][slice[0]:slice[1]]), np.flip(final_arc[1][slice[0]:slice[1]])
     vertices_2coils[i][1], vertices_2coils[i][3] = np.zeros((3,11)), np.zeros((3,11))
-    vertices_2coils[i][1][0], vertices_2coils[i][3][0] = np.linspace(-4.25, 4.25, 11, endpoint=True), np.linspace(4.25, -4.25, 11, endpoint=True)
+    vertices_2coils[i][1][0], vertices_2coils[i][3][0] = np.linspace(-42.5, 42.5, 11, endpoint=True), np.linspace(42.5, -42.5, 11, endpoint=True)
     vertices_2coils[i][1][1], vertices_2coils[i][3][1] = np.ones((11))*vertices_2coils[i][0][1][-1], np.ones((11))*vertices_2coils[i][2][1][-1]
     vertices_2coils[i][1][2], vertices_2coils[i][3][2] = np.ones((11))*vertices_2coils[i][0][2][-1], np.ones((11))*vertices_2coils[i][2][2][-1]
 
@@ -61,8 +61,9 @@ for i, vertices in enumerate(vertices_2coils):
 coil1 = magpy.Collection(curr_lines_2coils[0])
 coil2 = magpy.Collection(curr_lines_2coils[1])
 both_coils = magpy.Collection((coil1, coil2))
+both_coils.move((0,0,100))
 # Define coil
-quad_loop = MRIcoil.MRIcoil(current=100, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
+quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
 # Create figure
 fig2 = plt.figure(figsize=[12, 8])
 fig2.suptitle("Specialized coil (s=8.5cm) with field lines in slice z = 0, y = 0 and x = 0")
@@ -76,7 +77,7 @@ quad_loop.show_field_lines(slice="x10", ax=ax3, fig=fig2)
 ax3.hlines(y=[20], xmin=[-45], xmax=[45], colors=['k'], linestyles='dashed')
 quad_loop.show_field_lines(slice="y10", ax=ax4, fig=fig2)
 ax4.hlines(y=[20], xmin=[-45], xmax=[45], colors=['k'], linestyles='dashed')
-X, Y, Z = utils.plane_at("z=-9", extent=10)
+X, Y, Z = utils.plane_at("z=-9")
 ax1.plot_surface(X, Y, Z, alpha=.3, label="x = 0, slice 50")
 #quad_loop.show_field_magnitude("B")
 plt.show()
