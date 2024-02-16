@@ -48,7 +48,7 @@ normalized_field_magn = abs_array/np.max(abs_array)
 
 # Initial display range
 display_range = 2
-current_index = 55
+current_index = 50
 
 # Create the initial plot
 fig, ax = plt.subplots()
@@ -57,6 +57,7 @@ cb = plt.colorbar(img, label="Normalized")
 ax.set_title(f"Magnitude of complex value")
 ax.set_xlabel("x")
 ax.set_ylabel("y")
+plt.savefig("ketchup_surface_loop.png")
 
 # Function to update the plot with the next portion of data
 def update_plot(forward=True):

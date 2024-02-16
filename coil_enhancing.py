@@ -41,23 +41,27 @@ curr_line_vertices = np.delete(curr_line_vertices, i_to_remove, axis=0)
 
 # Fit a line to the chosen vertices
 popt, pcov = curve_fit(square, curr_line_vertices[:,0], curr_line_vertices[:,2])
-xs_curr_arc = np.linspace(-45, 45, 19) # We dont need 91 steps, so i reduce to 19
+xs_curr_arc = np.linspace(-45, 45, 11) # We dont need 91 steps, so i reduce to 19
 zs_curr_arc = square(xs_curr_arc, *popt)
 
 # Define vertices for current lines to run through
 vertices_curr_arc_neg = np.concatenate([xs_curr_arc.reshape(len(xs_curr_arc),1), 
                                         np.ones_like(xs_curr_arc).reshape(len(xs_curr_arc),1)*-45, 
-                                        zs_curr_arc.reshape(len(xs_curr_arc),1)],axis=1)
+                                        zs_curr_arc.reshape(len(xs_curr_arc),1)],
+                                        axis=1)
 vertices_curr_arc_pos = np.concatenate([xs_curr_arc.reshape(len(xs_curr_arc),1), 
                                         np.ones_like(xs_curr_arc).reshape(len(xs_curr_arc),1)*45, 
-                                        zs_curr_arc.reshape(len(xs_curr_arc),1)],axis=1)
-ys_curr_line = np.linspace(-45, 45, 19).reshape(19,1)
+                                        zs_curr_arc.reshape(len(xs_curr_arc),1)],
+                                        axis=1)
+ys_curr_line = np.linspace(-45, 45, 11).reshape(11,1)
 vertices_curr_line_neg =  np.concatenate([np.ones_like(ys_curr_line)*xs_curr_arc[0], 
                                           ys_curr_line, 
-                                          np.ones_like(ys_curr_line)*square(xs_curr_arc[0], *popt)], axis=1)
+                                          np.ones_like(ys_curr_line)*square(xs_curr_arc[0], *popt)], 
+                                          axis=1)
 vertices_curr_line_pos =  np.concatenate([np.ones_like(ys_curr_line)*xs_curr_arc[-1], 
                                           ys_curr_line, 
-                                          np.ones_like(ys_curr_line)*square(xs_curr_arc[-1], *popt)], axis=1)
+                                          np.ones_like(ys_curr_line)*square(xs_curr_arc[-1], *popt)], 
+                                          axis=1)
 cur_arc_neg = magpy.current.Line(100, vertices_curr_arc_neg)
 cur_line_pos = magpy.current.Line(100, vertices_curr_line_pos)
 cur_arc_pos = magpy.current.Line(100, np.flip(vertices_curr_arc_pos, axis=0))

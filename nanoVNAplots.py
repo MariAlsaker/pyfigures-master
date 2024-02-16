@@ -323,7 +323,7 @@ if print_Qs_quad:
 if show_quad_plots:
     plt.show()
 else:
-    plt.close()
+    plt.close("all")
 
 """ HYBRID PLOTS AND MEASUREMENTS """
 
@@ -344,6 +344,8 @@ labels = ["s_11", "s_21", "s_12", "s_22"]
 axs = [axs1[0], axs1[1], axs2[0], axs2[1], axs3[0], axs3[1]]
 magn_at_res = np.zeros((len(hybrid_data), 4))
 phase_at_res = np.zeros((len(hybrid_data), 4))
+prev = 0
+diffs = []
 for i, name in enumerate(hybrid_data):
     vals = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename=name, file_len=501)
     freqs_h = vals[0][0]*1E-6
@@ -358,25 +360,20 @@ for i, name in enumerate(hybrid_data):
     axs[i].legend()
     magn_at_res[i] = np.array((s_11s[3][res], s_21s[3][res], s_12s[3][res], s_22s[3][res]))
     phase_at_res[i] = np.array((s_11s[4][res], s_21s[4][res], s_12s[4][res], s_22s[4][res]))
+    if hybrid_setups[i].split(" ")[1] == "through,":
+        this = np.array([s_12s[-1], s_21s[-1]])
+        if hybrid_setups[i].split(" ")[-1] == "opposite":
+            diff = prev-this
+            diffs.append(diff)
+        prev = this
+diffs = np.array(diffs)
 
-c = 3E8
-len1 = 1.05
-len2 = 0.08
-perm = 1.1
-f = 33.78E6
-delay_s1 = len1 * np.sqrt(perm)/c
-eff_phase1 = 360*f*delay_s1
-delay_s2 = len2 * np.sqrt(perm)/c
-eff_phase2 = 360*f*delay_s2
-eff_phase = eff_phase1+eff_phase2
-print(eff_phase1)
-print(eff_phase2)
 print(labels)
 for i in range(len(hybrid_data)):
     print("\n", hybrid_setups[i])
     print(f"magnitude = {np.around(magn_at_res[i], decimals=2)}")
-    # if hybrid_setups[i].split(" ")[1] == "through,":
-    #     print(f"phase = {np.around(phase_at_res[i]/np.pi * 360 + eff_phase2, decimals=2)}")
-    # else:
-    print(f"phase = {np.around(phase_at_res[i]/np.pi * 360, decimals=2)}")
+    print(f"phase = {np.around(phase_at_res[i], decimals=3)}")
+print("s_12, s_21")
+print(diffs[:,:,res])# /(2*np.pi)*360)
+print(diffs[:,:,res] /(2*np.pi)*360)
 plt.show()
