@@ -8,6 +8,7 @@ from scipy.optimize import curve_fit
 from scipy.ndimage import rotate
 import utils
 
+# Creating my arc in 2D
 center = (0,0)
 radius = 10.3
 x = np.linspace(center[0], center[0]+radius, 101, endpoint=True)
@@ -16,21 +17,66 @@ rot_angle = np.radians(90+45)
 cos, sin = np.cos(rot_angle), np.sin(rot_angle)
 rot_matrix = np.array([[cos, sin], [-np.sin(rot_angle), np.cos(rot_angle)]])
 new_arc = np.dot(rot_matrix, arc)
-num_points = 11
+num_points = 20
 x_points = np.linspace(new_arc[0][0], new_arc[0][-1], num_points, endpoint=True)
-arc_plot = np.zeros((2, num_points))
+final_arc = np.zeros((2, num_points))
 for i, x in enumerate(x_points):
-    print(new_arc[0])
-    print(x_points)
     index = np.where(new_arc[0]>=x)[0][0]
     keep_x, keep_y = new_arc[0][index], new_arc[1][index]
-    arc_plot[0][i] = keep_x
-    arc_plot[1][i] = keep_y
-print(arc_plot)
-plt.figure(figsize=[5,5])
-plt.vlines([0], ymin=-radius, ymax=radius, colors=["k"])
-plt.hlines([0], xmin=-radius, xmax=radius, colors=["k"])
-plt.plot(arc[0], arc[1])
-plt.plot(new_arc[0], new_arc[1])
-plt.plot(arc_plot[0], arc_plot[1])
+    final_arc[0][i] = keep_x
+    final_arc[1][i] = keep_y
+print(final_arc.shape) # x, y = 0, 1
+
+# In the MRI machine we have the coil in the x-y-plane (but really the x-z plane)
+slice_start_end = [(0, 11), (8, -1)]
+vertices_2coils = np.zeros((2, 4, 3, 11))
+for i, slice in enumerate(slice_start_end):
+    # vert_negarc = vertices_2coils[i][0]
+    # vert_negpos = vertices_2coils[i][1]
+    # vert_posarc = vertices_2coils[i][2]
+    # vert_posneg = vertices_2coils[i][3]
+    vertices_2coils[i][0], vertices_2coils[i][2] = np.zeros((3,11)), np.zeros((3,11)) # fra minus til pluss, fra pluss til minus
+    vertices_2coils[i][0][0], vertices_2coils[i][0][1], vertices_2coils[i][0][2] = np.ones((11))*-4.25, final_arc[0][slice[0]:slice[1]], final_arc[1][slice[0]:slice[1]]
+    vertices_2coils[i][2][0], vertices_2coils[i][2][1], vertices_2coils[i][2][2] = np.ones((11))*4.25, np.flip(final_arc[0][slice[0]:slice[1]]), np.flip(final_arc[1][slice[0]:slice[1]])
+    vertices_2coils[i][1], vertices_2coils[i][3] = np.zeros((3,11)), np.zeros((3,11))
+    vertices_2coils[i][1][0], vertices_2coils[i][3][0] = np.linspace(-4.25, 4.25, 11, endpoint=True), np.linspace(4.25, -4.25, 11, endpoint=True)
+    vertices_2coils[i][1][1], vertices_2coils[i][3][1] = np.ones((11))*vertices_2coils[i][0][1][-1], np.ones((11))*vertices_2coils[i][2][1][-1]
+    vertices_2coils[i][1][2], vertices_2coils[i][3][2] = np.ones((11))*vertices_2coils[i][0][2][-1], np.ones((11))*vertices_2coils[i][2][2][-1]
+
+# colors = ["green", "red"]
+# fig = plt.figure(figsize=[5,5])
+# ax = fig.add_subplot(111, projection="3d")
+# for i, slice in enumerate(slice_start_end):
+#     ax.plot3D(xs=vertices_2coils[i][2][0], ys=vertices_2coils[i][2][1], zs=vertices_2coils[i][2][2], color=colors[i])
+#     ax.plot3D(xs=vertices_2coils[i][1][0], ys=vertices_2coils[i][1][1], zs=vertices_2coils[i][1][2], color=colors[i])
+#     ax.plot3D(xs=vertices_2coils[i][0][0], ys=vertices_2coils[i][0][1], zs=vertices_2coils[i][0][2], color=colors[i])
+#     ax.plot3D(xs=vertices_2coils[i][3][0], ys=vertices_2coils[i][3][1], zs=vertices_2coils[i][3][2], color=colors[i])
+# ax.plot3D(xs=np.zeros((2)), ys=np.zeros((2)), zs=(-10.3, 0), color="k")
+# plt.show()
+
+curr_lines_2coils = [[], []]
+for i, vertices in enumerate(vertices_2coils):
+    for j, line in enumerate(vertices):
+        curr_lines_2coils[i].append( magpy.current.Line(100, line.transpose()))
+coil1 = magpy.Collection(curr_lines_2coils[0])
+coil2 = magpy.Collection(curr_lines_2coils[1])
+both_coils = magpy.Collection((coil1, coil2))
+# Define coil
+quad_loop = MRIcoil.MRIcoil(current=100, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
+# Create figure
+fig2 = plt.figure(figsize=[12, 8])
+fig2.suptitle("Specialized coil (s=8.5cm) with field lines in slice z = 0, y = 0 and x = 0")
+ax1 = fig2.add_subplot(2,2,1, projection="3d")
+ax2 = fig2.add_subplot(2,2,2)
+ax3 = fig2.add_subplot(2,2,3)
+ax4 = fig2.add_subplot(2,2,4)
+quad_loop.show_coil(ax=ax1)
+quad_loop.show_field_lines(slice="z40", ax=ax2, fig=fig2)
+quad_loop.show_field_lines(slice="x10", ax=ax3, fig=fig2)
+ax3.hlines(y=[20], xmin=[-45], xmax=[45], colors=['k'], linestyles='dashed')
+quad_loop.show_field_lines(slice="y10", ax=ax4, fig=fig2)
+ax4.hlines(y=[20], xmin=[-45], xmax=[45], colors=['k'], linestyles='dashed')
+X, Y, Z = utils.plane_at("z=-9", extent=10)
+ax1.plot_surface(X, Y, Z, alpha=.3, label="x = 0, slice 50")
+#quad_loop.show_field_magnitude("B")
 plt.show()
