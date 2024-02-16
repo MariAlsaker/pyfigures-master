@@ -43,17 +43,6 @@ for i, slice in enumerate(slice_start_end):
     vertices_2coils[i][1][1], vertices_2coils[i][3][1] = np.ones((11))*vertices_2coils[i][0][1][-1], np.ones((11))*vertices_2coils[i][2][1][-1]
     vertices_2coils[i][1][2], vertices_2coils[i][3][2] = np.ones((11))*vertices_2coils[i][0][2][-1], np.ones((11))*vertices_2coils[i][2][2][-1]
 
-# colors = ["green", "red"]
-# fig = plt.figure(figsize=[5,5])
-# ax = fig.add_subplot(111, projection="3d")
-# for i, slice in enumerate(slice_start_end):
-#     ax.plot3D(xs=vertices_2coils[i][2][0], ys=vertices_2coils[i][2][1], zs=vertices_2coils[i][2][2], color=colors[i])
-#     ax.plot3D(xs=vertices_2coils[i][1][0], ys=vertices_2coils[i][1][1], zs=vertices_2coils[i][1][2], color=colors[i])
-#     ax.plot3D(xs=vertices_2coils[i][0][0], ys=vertices_2coils[i][0][1], zs=vertices_2coils[i][0][2], color=colors[i])
-#     ax.plot3D(xs=vertices_2coils[i][3][0], ys=vertices_2coils[i][3][1], zs=vertices_2coils[i][3][2], color=colors[i])
-# ax.plot3D(xs=np.zeros((2)), ys=np.zeros((2)), zs=(-10.3, 0), color="k")
-# plt.show()
-
 curr_lines_2coils = [[], []]
 for i, vertices in enumerate(vertices_2coils):
     for j, line in enumerate(vertices):
@@ -65,19 +54,19 @@ both_coils.move((0,0,100))
 # Define coil
 quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
 # Create figure
-fig2 = plt.figure(figsize=[12, 8])
-fig2.suptitle("Specialized coil (s=8.5cm) with field lines in slice z = 0, y = 0 and x = 0")
-ax1 = fig2.add_subplot(2,2,1, projection="3d")
-ax2 = fig2.add_subplot(2,2,2)
-ax3 = fig2.add_subplot(2,2,3)
-ax4 = fig2.add_subplot(2,2,4)
-quad_loop.show_coil(ax=ax1)
-quad_loop.show_field_lines(slice="z40", ax=ax2, fig=fig2)
-quad_loop.show_field_lines(slice="x10", ax=ax3, fig=fig2)
-ax3.hlines(y=[20], xmin=[-45], xmax=[45], colors=['k'], linestyles='dashed')
-quad_loop.show_field_lines(slice="y10", ax=ax4, fig=fig2)
-ax4.hlines(y=[20], xmin=[-45], xmax=[45], colors=['k'], linestyles='dashed')
-X, Y, Z = utils.plane_at("z=-9")
-ax1.plot_surface(X, Y, Z, alpha=.3, label="x = 0, slice 50")
-#quad_loop.show_field_magnitude("B")
+# fig2 = plt.figure(figsize=[12, 8])
+# fig2.suptitle("Quadrature coil (s=8.5cm) with field lines in slice z = 0, y = 0 and x = 0")
+# ax1 = fig2.add_subplot(2,2,1, projection="3d")
+# ax2 = fig2.add_subplot(2,2,2)
+# ax3 = fig2.add_subplot(2,2,3)
+# ax4 = fig2.add_subplot(2,2,4)
+# quad_loop.show_coil(ax=ax1)
+# quad_loop.show_field_lines(slice="z50", ax=ax2, fig=fig2)
+# quad_loop.show_field_lines(slice="x50", ax=ax3, fig=fig2)
+# ax3.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
+# quad_loop.show_field_lines(slice="y50", ax=ax4, fig=fig2)
+# ax4.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
+# X, Y, Z = utils.plane_at("z=40")
+# ax1.plot_surface(X, Y, Z, alpha=.3, label="x = 0, slice 50")
+quad_loop.show_field_magnitude("B", gif_name="quad_Bmagn.mp4")
 plt.show()
