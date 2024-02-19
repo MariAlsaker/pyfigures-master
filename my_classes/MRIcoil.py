@@ -82,7 +82,7 @@ class MRIcoil:
         )
         if colorbar:
             cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
-            ticks = np.array([3,10,30,100])
+            ticks = np.array([1,10])
             cb.set_ticks(np.log10(ticks))
             cb.set_ticklabels(ticks)
         if flip_ax:
@@ -113,6 +113,7 @@ class MRIcoil:
         ax = fig.add_subplot(1,1,1)
         ticks = np.linspace(0, 100, 5, endpoint=True)
         normalized_field_magn = self.calc_normalized_field_magn(field)
+        normalized_field_magn = np.transpose(normalized_field_magn, (2,0,1))
         for f_slc in normalized_field_magn:
             if not initialized:
                 img = ax.pcolormesh(f_slc, cmap="plasma", vmin=0, vmax=vmax)
