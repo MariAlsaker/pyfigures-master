@@ -183,7 +183,8 @@ def find_mean(num_files, file_path, filename, ending=".s1p", file_len = 301, all
     return mean_data, std_data
 
 def find_mean_allS(num_files, file_path, filename, ending=".s2p", file_len = 301):
-    magn_desibels = np.zeros((2,num_files,file_len))
+    magn_desibels = np.zeros((4,num_files,file_len))
+    phase = np.zeros((4, num_files, file_len))
     for i in range(num_files):
         this_file = file_path+f"{filename}{i}{ending}"
         vals = extract_vals_s2p_allS(this_file, len_file=file_len)
@@ -192,13 +193,20 @@ def find_mean_allS(num_files, file_path, filename, ending=".s2p", file_len = 301
             # f, r_s11, i_s11, r_s21, i_s21, r_s12, i_s12, r_s22, i_s22
             data = np.zeros((num_files,9,len(vals[0]))) 
         data[i] = vals 
-        magn_desibels[0][i] = 20*np.log10( np.sqrt(vals[1]**2+vals[2]**2) )
-        magn_desibels[1][i] = 20*np.log10( np.sqrt(vals[7]**2+vals[8]**2) )
-    std_magn_db = [np.std(magn_desibels[0], axis=0), np.std(magn_desibels[1], axis=0)]
-    mean_magn_db = [np.mean(magn_desibels[0], axis=0), np.mean(magn_desibels[1], axis=0)]
+        magn_desibels[0][i] = 20*np.log10( np.sqrt(vals[1]**2+vals[2]**2) ) # S_11 parameter
+        magn_desibels[2][i] = 20*np.log10( np.sqrt(vals[3]**2+vals[4]**2) ) # S_21 parameter
+        magn_desibels[3][i] = 20*np.log10( np.sqrt(vals[5]**2+vals[6]**2) ) # S_12 parameter
+        magn_desibels[1][i] = 20*np.log10( np.sqrt(vals[7]**2+vals[8]**2) ) # S_22 parameter
+        phase[0][i] = np.arctan(vals[2]/vals[1]) # S_11 parameter
+        phase[2][i] = np.arctan(vals[4]/vals[3]) # S_21 parameter
+        phase[3][i] = np.arctan(vals[6]/vals[5]) # S_12 parameter
+        phase[1][i] = np.arctan(vals[8]/vals[7]) # S_22 parameter
+    std_magn_db = [np.std(magn_desibels[0], axis=0), np.std(magn_desibels[1], axis=0), np.std(magn_desibels[2], axis=0), np.std(magn_desibels[3], axis=0)]
+    mean_magn_db = [np.mean(magn_desibels[0], axis=0), np.mean(magn_desibels[1], axis=0), np.mean(magn_desibels[2], axis=0), np.mean(magn_desibels[3], axis=0)]
     mean_data = np.mean(data, axis=0)
-    std_data = np.std(data, axis=0)
-    return mean_data, std_magn_db, mean_magn_db
+    mean_phase = [np.mean(phase[0], axis=0), np.mean(phase[1], axis=0), np.mean(phase[2], axis=0), np.mean(phase[3], axis=0)]
+    std_phase = [np.std(phase[0], axis=0), np.std(phase[1], axis=0), np.std(phase[2], axis=0), np.std(phase[3], axis=0)]
+    return mean_data, std_magn_db, mean_magn_db, mean_phase, std_phase
 
 def uncertainty_magn_db(reals, ims, std_reals, std_ims):
     magn = np.sqrt(reals**2 + ims**2)
@@ -346,6 +354,7 @@ magn_at_res = np.zeros((len(hybrid_data), 4))
 phase_at_res = np.zeros((len(hybrid_data), 4))
 prev = 0
 diffs = []
+u_diffs = [] # HArd work ough
 for i, name in enumerate(hybrid_data):
     vals = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename=name, file_len=501)
     freqs_h = vals[0][0]*1E-6
@@ -366,6 +375,12 @@ for i, name in enumerate(hybrid_data):
             diff = prev-this
             diffs.append(diff)
         prev = this
+    print(hybrid_setups[i])
+    s_sequence = ["S_11", "S_22", "S_21", "S_12"]
+    print("Magnitude and phase") # mean_data, std_magn_db, mean_magn_db, mean_phase, std_phase
+    for i in range(4):
+        print(f"Mag of {s_sequence[i]} = {vals[2][i][res]} +/- {vals[1][i][res]}")
+        print(f"Phase of {s_sequence[i]} = {vals[3][i][res]} +/- {vals[4][i][res]}")
 diffs = np.array(diffs)
 
 print(labels)
@@ -376,4 +391,8 @@ for i in range(len(hybrid_data)):
 print("s_12, s_21")
 print(diffs[:,:,res])# /(2*np.pi)*360)
 print(diffs[:,:,res] /(2*np.pi)*360)
+print(f"Phase difference green s21 is {0.103-(-1.383)} +/- {np.sqrt(0.004**2+0.002**2):.3f}")
+print(f"Phase difference green s12 is {0.098-(-1.378)} +/- {np.sqrt(0.003**2+0.003**2):.3f}")
+print(f"Phase difference blue s21 is {0.116-(-1.370)} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
+print(f"Phase difference blue s12 is {0.112-(-1.368)} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
 plt.show()
