@@ -8,6 +8,39 @@ from scipy.optimize import curve_fit
 from scipy.ndimage import rotate
 import utils
 
+def construct_3Dgrid_slice(extent_xy, z):
+    """ Constructs a 3D grid with extent diameter**3
+    \nNo return, stores grid in object.
+    """
+    X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
+    grid = np.stack([np.zeros((100,100)) + z, X, Y], axis=2)
+    return grid
+
+def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True):
+    if ax == None or fig == None:
+        fig, ax = plt.subplots()
+    log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
+    splt = ax.streamplot(
+        grid_slice[:, :, 1],
+        grid_slice[:, :, 2],
+        B_field[:, :, 1],
+        B_field[:, :, 2],
+        color=log10_norm_B,
+        density=1,
+        linewidth=log10_norm_B*2,
+        cmap="autumn",
+    )
+    if colorbar:
+        cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
+        ticks = np.array([1,10])
+        cb.set_ticks(np.log10(ticks))
+        cb.set_ticklabels(ticks)
+    ax.set(
+        xlabel=f"x-position (mm)",
+        ylabel=f"y-position (mm)")
+    plt.tight_layout()
+    return fig, ax
+
 # Creating my arc in 2D
 center = (0,0)
 radius = 103
@@ -25,7 +58,7 @@ for i, x in enumerate(x_points):
     keep_x, keep_y = new_arc[0][index], new_arc[1][index]
     final_arc[0][i] = keep_x
     final_arc[1][i] = keep_y
-print(final_arc) # x, y = 0, 1
+#print(final_arc) # x, y = 0, 1
 
 # In the MRI machine we have the coil in the x-y-plane (but really the x-z plane)
 slice_start_end = [(0, 11), (8, -1)]
@@ -44,42 +77,66 @@ for i, slice in enumerate(slice_start_end):
     vertices_2coils[i][1][2], vertices_2coils[i][3][2] = np.ones((11))*vertices_2coils[i][0][2][-1], np.ones((11))*vertices_2coils[i][2][2][-1]
 
 curr_lines_2coils = [[], []]
-currents = [100*np.cos(np.pi/4), 100*np.cos(3*np.pi/4)]
+currents = [100*np.cos(np.pi/4), 100*np.cos(np.pi/4 + np.pi/2)]
 for i, vertices in enumerate(vertices_2coils):
     for j, line in enumerate(vertices):
-        curr_lines_2coils[i].append( magpy.current.Line(currents[i], line.transpose()))
+        this_line =  magpy.current.Line(currents[i], line.transpose())
+        this_line.current
+        curr_lines_2coils[i].append(this_line)
 coil1 = magpy.Collection(curr_lines_2coils[0])
 coil2 = magpy.Collection(curr_lines_2coils[1])
-both_coils = magpy.Collection((coil1, coil2))
-both_coils.move((0,0,100))
-# Define coil
-quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
-# Create figure
-fig2 = plt.figure(figsize=[12, 8])
-fig2.suptitle("Quadrature coil (s=8.5cm) with field lines in slice z = 0, y = 40 and x = 0")
-ax1 = fig2.add_subplot(2,2,1, projection="3d")
-ax2 = fig2.add_subplot(2,2,2)
-ax3 = fig2.add_subplot(2,2,3)
-ax4 = fig2.add_subplot(2,2,4)
-quad_loop.show_coil(ax=ax1)
-quad_loop.show_field_lines(slice="z90", ax=ax2, fig=fig2)
-quad_loop.show_field_lines(slice="x50", ax=ax3, fig=fig2)
-ax3.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
-quad_loop.show_field_lines(slice="y50", ax=ax4, fig=fig2)
-ax4.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
-X, Y, Z = utils.plane_at("z=40")
-ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 40")
-# X, Y, Z = utils.plane_at("z=00")
-# ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 0")
+# Aiming for 8 different fields
+angles = np.linspace(0, 2*np.pi, 8, endpoint=False)
+# plt.plot(np.cos(angles), np.sin(angles))
+# plt.show()
+grid = construct_3Dgrid_slice(extent_xy=25, z=0)
+fig = plt.figure(figsize=[8, 12])
+start = 421
+for ang in angles:
+    for i, coil in enumerate([coil1, coil2]):
+        for current_line in coil.sources_all:
+            if i == 0:
+                current_line.current = 100*np.cos(ang)
+            else:
+                current_line.current = 100*np.cos(ang+np.pi/2)
+    both_coils = magpy.Collection((coil1, coil2), override_parent=True)
+    B_field = magpy.getB(both_coils, observers=grid)
+    ax = fig.add_subplot(start)
+    start = start+1
+    show_field_lines(grid, B_field, ax=ax, fig=fig)
+    ax.set_title(f"Current = ({100*np.cos(ang):.0f}, {100*np.cos(ang+np.pi/2):.0f}) A")
+plt.savefig("rotating_field_quad.png")
 
-ax1.set_xlabel("z (mm)")
-ax1.set_ylabel("x (mm)")
-ax1.set_zlabel("y (mm)")
-ax2.set_xlabel("z (mm)")
-ax2.set_ylabel("x (mm)")
-ax3.set_xlabel("z (mm)")
-ax3.set_ylabel("y (mm)")
-ax4.set_xlabel("x (mm)")
-ax4.set_ylabel("y (mm)")
+# Define coil by MRI coil class
+#quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
+
+# Create figure
+# fig2 = plt.figure(figsize=[12, 8])
+# fig2.suptitle("Quadrature coil (s=8.5cm) with field lines in slice z = 0, y = 40 and x = 0")
+# ax1 = fig2.add_subplot(2,2,1, projection="3d")
+# ax2 = fig2.add_subplot(2,2,2)
+# ax3 = fig2.add_subplot(2,2,3)
+# ax4 = fig2.add_subplot(2,2,4)
+# quad_loop.show_coil(ax=ax1)
+# quad_loop.show_field_lines(slice="z90", ax=ax2, fig=fig2)
+# quad_loop.show_field_lines(slice="x50", ax=ax3, fig=fig2)
+# ax3.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
+# quad_loop.show_field_lines(slice="y50", ax=ax4, fig=fig2)
+# ax4.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
+# X, Y, Z = utils.plane_at("z=40")
+# ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 40")
+# # X, Y, Z = utils.plane_at("z=00")
+# # ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 0")
+
+# ax1.set_xlabel("z (mm)")
+# ax1.set_ylabel("x (mm)")
+# ax1.set_zlabel("y (mm)")
+# ax2.set_xlabel("z (mm)")
+# ax2.set_ylabel("x (mm)")
+# ax3.set_xlabel("z (mm)")
+# ax3.set_ylabel("y (mm)")
+# ax4.set_xlabel("x (mm)")
+# ax4.set_ylabel("y (mm)")
 #quad_loop.show_field_magnitude("B", vmax=50, gif_name="quad_Bmagn.mp4")
-plt.show()
+#plt.show()
+    
