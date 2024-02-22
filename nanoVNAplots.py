@@ -350,11 +350,7 @@ axs3 = fig3.subplots(rows, cols)
 colors = [cmap(0.2), cmap(0.4), cmap(0.6), cmap(0.8)]
 labels = ["s_11", "s_21", "s_12", "s_22"]
 axs = [axs1[0], axs1[1], axs2[0], axs2[1], axs3[0], axs3[1]]
-magn_at_res = np.zeros((len(hybrid_data), 4))
-phase_at_res = np.zeros((len(hybrid_data), 4))
 prev = 0
-diffs = []
-u_diffs = [] # HArd work ough
 for i, name in enumerate(hybrid_data):
     vals = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename=name, file_len=501)
     freqs_h = vals[0][0]*1E-6
@@ -367,32 +363,15 @@ for i, name in enumerate(hybrid_data):
     axs[i].vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f=33.78MHz")
     axs[i].set_title(hybrid_setups[i])
     axs[i].legend()
-    magn_at_res[i] = np.array((s_11s[3][res], s_21s[3][res], s_12s[3][res], s_22s[3][res]))
-    phase_at_res[i] = np.array((s_11s[4][res], s_21s[4][res], s_12s[4][res], s_22s[4][res]))
-    if hybrid_setups[i].split(" ")[1] == "through,":
-        this = np.array([s_12s[-1], s_21s[-1]])
-        if hybrid_setups[i].split(" ")[-1] == "opposite":
-            diff = prev-this
-            diffs.append(diff)
-        prev = this
-    print(hybrid_setups[i])
-    s_sequence = ["S_11", "S_22", "S_21", "S_12"]
-    print("Magnitude and phase") # mean_data, std_magn_db, mean_magn_db, mean_phase, std_phase
-    for i in range(4):
-        print(f"Mag of {s_sequence[i]} = {vals[2][i][res]} +/- {vals[1][i][res]}")
-        print(f"Phase of {s_sequence[i]} = {vals[3][i][res]} +/- {vals[4][i][res]}")
-diffs = np.array(diffs)
-
-print(labels)
-for i in range(len(hybrid_data)):
     print("\n", hybrid_setups[i])
-    print(f"magnitude = {np.around(magn_at_res[i], decimals=2)}")
-    print(f"phase = {np.around(phase_at_res[i], decimals=3)}")
-print("s_12, s_21")
-print(diffs[:,:,res])# /(2*np.pi)*360)
-print(diffs[:,:,res] /(2*np.pi)*360)
-print(f"Phase difference green s21 is {0.103-(-1.383)} +/- {np.sqrt(0.004**2+0.002**2):.3f}")
-print(f"Phase difference green s12 is {0.098-(-1.378)} +/- {np.sqrt(0.003**2+0.003**2):.3f}")
-print(f"Phase difference blue s21 is {0.116-(-1.370)} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
-print(f"Phase difference blue s12 is {0.112-(-1.368)} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
+    s_sequence = ["S_11", "S_22", "S_21", "S_12"]
+    # mean_data, std_magn_db, mean_magn_db, mean_phase, std_phase
+    for i in range(4):
+        print(f"Mag of {s_sequence[i]} = {vals[2][i][res]:.5f} +/- {vals[1][i][res]:.5f}")
+        print(f"Phase of {s_sequence[i]} = {vals[3][i][res]:.5f} +/- {vals[4][i][res]:.5f}")
+
+print(f"\nPhase difference green s21 is {0.103-(-1.383):.3f} +/- {np.sqrt(0.004**2+0.002**2):.3f}")
+print(f"Phase difference green s12 is {0.098-(-1.378):.3f} +/- {np.sqrt(0.003**2+0.003**2):.3f}")
+print(f"Phase difference blue s21 is {0.116-(-1.370):.3f} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
+print(f"Phase difference blue s12 is {0.112-(-1.368):.3f} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
 plt.show()
