@@ -8,39 +8,6 @@ from scipy.optimize import curve_fit
 from scipy.ndimage import rotate
 import utils
 
-def construct_3Dgrid_slice(extent_xy, z):
-    """ Constructs a 3D grid with extent diameter**3
-    \nNo return, stores grid in object.
-    """
-    X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
-    grid = np.stack([np.zeros((100,100)) + z, X, Y], axis=2)
-    return grid
-
-def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True):
-    if ax == None or fig == None:
-        fig, ax = plt.subplots()
-    log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
-    splt = ax.streamplot(
-        grid_slice[:, :, 1],
-        grid_slice[:, :, 2],
-        B_field[:, :, 1],
-        B_field[:, :, 2],
-        color=log10_norm_B,
-        density=1,
-        linewidth=log10_norm_B*2,
-        cmap="autumn",
-    )
-    if colorbar:
-        cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
-        ticks = np.array([1,10])
-        cb.set_ticks(np.log10(ticks))
-        cb.set_ticklabels(ticks)
-    ax.set(
-        xlabel=f"x-position (mm)",
-        ylabel=f"y-position (mm)")
-    plt.tight_layout()
-    return fig, ax
-
 # Creating my arc in 2D
 center = (0,0)
 radius = 103
@@ -87,9 +54,12 @@ coil1 = magpy.Collection(curr_lines_2coils[0])
 coil2 = magpy.Collection(curr_lines_2coils[1])
 # Aiming for 8 different fields
 angles = np.linspace(0, 2*np.pi, 8, endpoint=False)
-# plt.plot(np.cos(angles), np.sin(angles))
-# plt.show()
-grid = construct_3Dgrid_slice(extent_xy=25, z=0)
+
+extent_xy = 25
+z = 0
+X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
+grid = np.stack([np.zeros((100,100)) + z, X, Y], axis=2)
+
 fig = plt.figure(figsize=[8, 12])
 start = 421
 for ang in angles:
@@ -103,7 +73,7 @@ for ang in angles:
     B_field = magpy.getB(both_coils, observers=grid)
     ax = fig.add_subplot(start)
     start = start+1
-    show_field_lines(grid, B_field, ax=ax, fig=fig)
+    utils.show_field_lines(grid, B_field, ax=ax, fig=fig)
     ax.set_title(f"Current = ({100*np.cos(ang):.0f}, {100*np.cos(ang+np.pi/2):.0f}) A")
 plt.savefig("rotating_field_quad.png")
 

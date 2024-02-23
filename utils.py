@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib.colors import to_hex
 from stl import mesh
+import matplotlib.pyplot as plt
 
 # Save all your calculations here and use them in other files.
 # Example: plane_at, loop induction calc, conductance_calc, bin_to_hex, trace_from_stl, ...
@@ -73,3 +74,28 @@ def trace_from_stl(stl_file, x_coords_current=None):
                         idx.append(i)
         return trace, vertices[idx]
     return trace
+
+def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True):
+    if ax == None or fig == None:
+        fig, ax = plt.subplots()
+    log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
+    splt = ax.streamplot(
+        grid_slice[:, :, 1],
+        grid_slice[:, :, 2],
+        B_field[:, :, 1],
+        B_field[:, :, 2],
+        color=log10_norm_B,
+        density=1,
+        linewidth=log10_norm_B*2,
+        cmap="autumn",
+    )
+    if colorbar:
+        cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
+        ticks = np.array([1,10])
+        cb.set_ticks(np.log10(ticks))
+        cb.set_ticklabels(ticks)
+    ax.set(
+        xlabel=f"x-position (mm)",
+        ylabel=f"y-position (mm)")
+    plt.tight_layout()
+    return fig, ax
