@@ -16,7 +16,7 @@ c_num = np.linspace(0,1,len(t), endpoint=False)
 colors = [cmap(num) for num in c_num]
 ypos = 1.76
 for i, val in enumerate(t):
-    qv = ax.quiver(0, 0, x[i], y[i], color = colors[i], scale_units="xy", angles="xy", scale=1)
+    qv = ax.quiver(0, 0, x[i], -y[i], color = colors[i], scale_units="xy", angles="xy", scale=1)
     ax.quiverkey(qv, 1.6, ypos, 0.4, f"B-field t = {val*1E9:.1f}ns,\n (x,y)=({x[i]:.1f},{y[i]:.1f})", coordinates="data")
     ypos = ypos-0.4
 ax.set_title("Field of quadrature coil")
