@@ -95,13 +95,13 @@ def q_factor(freqs, magn_db, reals, ims, z0):
     R_nom = (1 + reals[index_w0])*(1 - reals[index_w0]) - ims[index_w0]**2
     R_denom = (1 - reals[index_w0])**2+ims[index_w0]**2
     R = z0 * R_nom / R_denom 
-    n=5
+    n=5 # Region of X-values for calculating derivative
     pos_slopeRs = reals[int(index_w0-n/2):int(index_w0+n/2)]
     pos_slopeIs = ims[int(index_w0-n/2):int(index_w0+n/2)]
     pos_slopews = freqs[int(index_w0-n/2):int(index_w0+n/2)]
     Xs = z0* 2*pos_slopeIs/((1-pos_slopeRs)**2 + pos_slopeIs**2)
-    partX = (n*(np.sum(pos_slopews*Xs)) - np.sum(pos_slopews)*np.sum(Xs)) / (n*np.sum(pos_slopews**2) - np.sum(pos_slopews)**2)
-    return freqs[index_w0]/(2*R+2*z0) * partX
+    dX = (n*(np.sum(pos_slopews*Xs)) - np.sum(pos_slopews)*np.sum(Xs)) / (n*np.sum(pos_slopews**2) - np.sum(pos_slopews)**2)
+    return freqs[index_w0]/(2*R+2*z0) * dX
 
 def plot_smith(ax, reals, ims, c, magn_db, c_spes):
     """ ax must be projection=smith """
