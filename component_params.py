@@ -56,7 +56,7 @@ def matching_caps_from_RZ(C, resistance, impedance_line):
     return C_m
 
 # ---- RUNNING CALCULATIONS ---#
-loop_d = 0.105 # [m] = 9 cm
+loop_d = 0.1065 # [m] = 9 cm
 square_s = 0.09 # [m] = 9 cm
 wire_d = 0.0015 # [m] = 1.00 mm
 n_caps = 2
