@@ -64,24 +64,47 @@ curr_lines = []
 for line in vertices_coil:
     curr_lines.append( magpy.current.Line(100, line.transpose()))
 coil = magpy.Collection(curr_lines)
-coil.move((0,0,100))
+coil.move((0,0,80))
 # Define coil
-surface_coil = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=coil)
+extent_xy = 50
 # Create figure
-fig2 = plt.figure(figsize=[12, 8])
-fig2.suptitle("Surface coil (s=9.0cm) with field lines in slice z = 0mm, y = 40mm and x = 0mm")
+fig2 = plt.figure(figsize=[6, 5])
+fig2.suptitle("Surface coil (s=9.0cm), field lines slice z = 0mm")
 ax1 = fig2.add_subplot(2,2,1, projection="3d")
 ax2 = fig2.add_subplot(2,2,2)
 ax3 = fig2.add_subplot(2,2,3)
 ax4 = fig2.add_subplot(2,2,4)
-surface_coil.show_coil(ax=ax1)
-surface_coil.show_field_lines(slice="z90", ax=ax2, fig=fig2)
-surface_coil.show_field_lines(slice="x50", ax=ax3, fig=fig2)
-ax3.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
-surface_coil.show_field_lines(slice="y50", ax=ax4, fig=fig2)
-ax4.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
-X, Y, Z = utils.plane_at("z=40")
-ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 40")
+magpy.show(coil, backend='matplotlib',return_fig=False, canvas=ax1)
+
+X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
+zs = np.linspace(-extent_xy, extent_xy, 100)
+grid_3D = []
+for z in zs:
+    grid_xy = np.stack([X, Y, np.zeros((100,100)) + z], axis=2)
+    grid_3D.append(grid_xy)
+grid_3D = np.array(grid_3D)
+print(type(grid_3D))
+
+x=50
+grid = grid_3D[:,x,:]
+B_field = magpy.getB(coil, observers=grid)
+utils.show_field_lines(grid, B_field, ax=ax2, fig=fig2, slicein="x")
+
+y=50
+grid = grid_3D[y,:,:]
+B_field = magpy.getB(coil, observers=grid)#.transpose(2,1,0)
+print(grid.shape, B_field.shape)
+utils.show_field_lines(grid, B_field, ax=ax3, fig=fig2, slicein="z")
+
+z = 50
+grid = grid_3D[:,:,z]
+#grid = np.stack([np.zeros((100,100)) + z, X, Y], axis=2) #first
+B_field = magpy.getB(coil, observers=grid)
+utils.show_field_lines(grid, B_field, ax=ax4, fig=fig2, slicein="y")
+
+#ax2.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
+#X, Y, Z = utils.plane_at("z=40")
+#ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 40")
 # X, Y, Z = utils.plane_at("z=00")
 # ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 0")
 
@@ -89,10 +112,11 @@ ax1.set_xlabel("z (mm)")
 ax1.set_ylabel("x (mm)")
 ax1.set_zlabel("y (mm)")
 ax2.set_xlabel("z (mm)")
-ax2.set_ylabel("x (mm)")
-ax3.set_xlabel("z (mm)")
-ax3.set_ylabel("y (mm)")
+ax2.set_ylabel("y (mm)")
+ax3.set_xlabel("x (mm)")
+ax3.set_ylabel("z (mm)")
 ax4.set_xlabel("x (mm)")
 ax4.set_ylabel("y (mm)")
 # surface_coil.show_field_magnitude("B", vmax=100)
+plt.tight_layout()
 plt.show()

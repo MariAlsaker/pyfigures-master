@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 # Example: plane_at, loop induction calc, conductance_calc, bin_to_hex, trace_from_stl, ...
 
 def plane_at(slice="x=00", extent=50):
-    xx = np.linspace(-extent, extent, 101)
-    zz = np.linspace(-extent, extent, 101)
-    yy = np.linspace(-extent, extent, 101)
+    xx = np.linspace(-extent, extent, 100, endpoint=True)
+    zz = np.linspace(-extent, extent, 100, endpoint=True)
+    yy = np.linspace(-extent, extent, 100, endpoint=True)
     if slice[0]=="x":
         Y, Z = np.meshgrid(yy, zz)
         X = np.ones_like(Y)*int(slice[-2:])
@@ -75,15 +75,24 @@ def trace_from_stl(stl_file, x_coords_current=None):
         return trace, vertices[idx]
     return trace
 
-def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True):
+def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True, slicein="z"):
     if ax == None or fig == None:
         fig, ax = plt.subplots()
+    if slicein=="z":
+        i1, i2 = 0,1
+    elif slicein=="y":
+        i1, i2 = 1,2
+    elif slicein=="x":
+        i1, i2 = 0,2
+    else:
+        Exception(f"{slicein} is not a leagal slize dimension")
     log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
+    print(grid_slice[:, :, i2].shape)
     splt = ax.streamplot(
-        grid_slice[:, :, 1],
-        grid_slice[:, :, 2],
-        B_field[:, :, 1],
-        B_field[:, :, 2],
+        grid_slice[:, :, i1],
+        grid_slice[:, :, i2],
+        B_field[:, :, i1],
+        B_field[:, :, i2],
         color=log10_norm_B,
         density=1,
         linewidth=log10_norm_B*2,
