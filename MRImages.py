@@ -1,9 +1,12 @@
 import scipy.io
+from scipy.ndimage import convolve1d
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.widgets import Button
 import matplotlib as mpl
 import numpy as np
+
+my_cmap = "gist_gray" # "tab20", "plasma"
 
 def show_as_video(im_array, vmax:int=1, gif_name:str=None):
     """ Show an animation of the normalized field magnitude in all slices through z-axis. \n 
@@ -21,14 +24,14 @@ def show_as_video(im_array, vmax:int=1, gif_name:str=None):
     normalized_field_magn = abs_array/np.max(abs_array)
     for f_slc in normalized_field_magn:
         if not initialized:
-            img = ax.pcolormesh(f_slc, cmap="plasma", vmin=0, vmax=vmax)
+            img = ax.pcolormesh(f_slc, cmap=my_cmap, vmin=0, vmax=vmax)
             plt.colorbar(img, label="[%]")
             ax.set_title(f"Magnitude of complex value")
             ax.set_xlabel("x")
             ax.set_ylabel("y")
             initialized = True
         else:
-            img = ax.pcolormesh(f_slc, cmap="plasma", vmin=0, vmax=vmax, animated=True)
+            img = ax.pcolormesh(f_slc, cmap=my_cmap, vmin=0, vmax=vmax, animated=True)
         imgs.append([img])
     ani = animation.ArtistAnimation(fig, imgs, interval=50, blit=True,
                             repeat_delay=1000)
@@ -42,6 +45,26 @@ def calculate_SNR(S_values, N_values):
     signal = np.mean(S_values)
     snr = 0.655 *signal/sd
     return snr
+
+def gaussianKernel(size, sigma, twoDimensional=True):
+    if twoDimensional:
+        kernel = np.fromfunction(lambda x, y: (1/(2*np.pi*sigma**2)) * np.e ** ((-1*((x-(size-1)/2)**2+(y-(size-1)/2)**2))/(2*sigma**2)), (size, size))
+    else:
+        kernel = np.fromfunction(lambda x: np.e ** ((-1*(x-(size-1)/2)**2) / (2*sigma**2)), (size,))
+    return kernel / np.sum(kernel)
+
+def blurring_2D(img, kernel_size, padding=0, rep=1, gaussian=False):
+    if gaussian:
+        k = gaussianKernel(kernel_size, sigma=3)
+    else:
+        k = np.ones((kernel_size))/kernel_size
+    out = img.copy()
+    if padding != 0:
+        np.pad(out, pad_width=padding, mode="constant")
+    for j in range(rep):
+        for i in range(2):
+            out = convolve1d(out, weights=k, axis=i)
+    return out
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage", "BirdcageEnh"] # "Birdcage2nd"
@@ -68,7 +91,8 @@ for k, coil in enumerate(coils):
     #         if splitted[0] == "f0:":
     #             f0 = int(splitted[-2])
     #             f0s.append(f0)
-    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 5))
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
+    axs = axs.flatten()
     fig.suptitle(f"Normalized magnitude plots for 3D cones sequence with {coil} coil,\n SNR={snr:.2f}, f0={f0} (Bloch Siegert)")
     for i, ros in enumerate(readouts):
         im_volume = np.load(numpy_files_path+f"{coil}_{ros}_X.npy")
@@ -99,10 +123,16 @@ for k, coil in enumerate(coils):
             axs[i].plot([xsN[j],xsN[j]], ysN, color = "w")
             axs[i].plot(xsN, [ysN[j],ysN[j]], color = "w")
 
-        img = axs[i].imshow(normalized_field_magn[current_index], cmap="plasma", vmin=0, vmax=1) 
+        img = axs[i].imshow(normalized_field_magn[current_index], cmap=my_cmap, vmin=0, vmax=1) 
         axs[i].set_xlabel("x")
         axs[i].set_ylabel("y")
         axs[i].set_title(f"{ros} readouts,\nmax = {maximum:.0f}, SNR = {calculate_SNR(signal_squares, noise_squares):.2f}")
+        if i == len(readouts)-1 and k <4:
+            blurred = blurring_2D(normalized_field_magn[current_index], kernel_size=3, padding=1, rep=5)
+            blurred_norm = blurred/np.max(blurred)
+            blurred_norm = np.ma.where(blurred_norm>0.25, blurred_norm, np.ones_like(blurred_norm))
+            new = normalized_field_magn[current_index]/blurred_norm
+            axs[i+1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
     fig.subplots_adjust(bottom=0.2)
     cbar_ax = fig.add_axes([0.15, 0.1, 0.7, 0.05])
     cb = fig.colorbar(img, label="Normalized", cax=cbar_ax, location="bottom")
@@ -110,7 +140,7 @@ for k, coil in enumerate(coils):
     plt.show()
     plt.close("all")
 
-# cmap = mpl.colormaps.get_cmap("plasma")
+# cmap = mpl.colormaps.get_cmap(my_cmap)
 # c_num = np.linspace(0,1,len(coils), endpoint=False)
 # colors = [cmap(num) for num in c_num]
 # plt.bar(coils, snrs, color=colors, zorder=3)
