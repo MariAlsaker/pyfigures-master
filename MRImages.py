@@ -69,6 +69,8 @@ def blurring_2D(img, kernel_size, padding=0, rep=1, gaussian=False):
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage", "BirdcageEnh"] # "Birdcage2nd"
 readouts = ["197", "1402", "2552"]
+kspace_samp = ["10", "12", "25"]
+resolution = ["4.5", "3", "3"]
 centers = [[[58, 80], [38, 58], [38, 56]], 
            [[58, 80], [38, 57], [38, 56]], 
            [[65, 77], [43, 58], [42, 55]], 
@@ -76,24 +78,26 @@ centers = [[[58, 80], [38, 58], [38, 56]],
            [[58, 77], [38, 56], [38, 53]], 
            [[58, 75], [38, 55], [38, 53]]]
 snrs = []
+calculated_snrs = []
 f0s = []
 coil = coils[0]
 for k, coil in enumerate(coils):
     snr = 2
     f0 = 33.78
-    # with open(numpy_files_path+f"{coil}_X_optimizer.txt", "r") as optim_f:
-    #     for line in optim_f:
-    #         splitted = line.split(" ")
-    #         if splitted[0] == "SNR":
-    #             print(splitted[2])
-    #             snr = float(splitted[-1].strip())
-    #             snrs.append(snr)
-    #         if splitted[0] == "f0:":
-    #             f0 = int(splitted[-2])
-    #             f0s.append(f0)
+    with open(numpy_files_path+f"{coil}_X_optimizer.txt", "r") as optim_f:
+        for line in optim_f:
+            splitted = line.split(" ")
+            if splitted[0] == "SNR":
+                #print(splitted[2])
+                snr = float(splitted[-1].strip())
+                snrs.append(snr)
+            if splitted[0] == "f0:":
+                f0 = int(splitted[-2])
+                f0s.append(f0)
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
     axs = axs.flatten()
     fig.suptitle(f"Normalized magnitude plots for 3D cones sequence with {coil} coil,\n SNR={snr:.2f}, f0={f0} (Bloch Siegert)")
+    snrs_this_coil = []
     for i, ros in enumerate(readouts):
         im_volume = np.load(numpy_files_path+f"{coil}_{ros}_X.npy")
         abs_array = abs(im_volume)
@@ -126,28 +130,49 @@ for k, coil in enumerate(coils):
         img = axs[i].imshow(normalized_field_magn[current_index], cmap=my_cmap, vmin=0, vmax=1) 
         axs[i].set_xlabel("x")
         axs[i].set_ylabel("y")
-        axs[i].set_title(f"{ros} readouts,\nmax = {maximum:.0f}, SNR = {calculate_SNR(signal_squares, noise_squares):.2f}")
+        axs[i].set_title(f"{ros} readouts, {resolution[i]}x{resolution[i]}x{resolution[i]}, {kspace_samp[i]}% k-space sampling")
         if i == len(readouts)-1 and k <4:
             blurred = blurring_2D(normalized_field_magn[current_index], kernel_size=3, padding=1, rep=5)
             blurred_norm = blurred/np.max(blurred)
             blurred_norm = np.ma.where(blurred_norm>0.25, blurred_norm, np.ones_like(blurred_norm))
             new = normalized_field_magn[current_index]/blurred_norm
             axs[i+1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
+        snr_calc = calculate_SNR(signal_squares, noise_squares)
+        snrs_this_coil.append(snr_calc)
+    calculated_snrs.append(snrs_this_coil)
     fig.subplots_adjust(bottom=0.2)
     cbar_ax = fig.add_axes([0.15, 0.1, 0.7, 0.05])
     cb = fig.colorbar(img, label="Normalized", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-    plt.show()
+    #plt.show()
     plt.close("all")
 
-# cmap = mpl.colormaps.get_cmap(my_cmap)
-# c_num = np.linspace(0,1,len(coils), endpoint=False)
-# colors = [cmap(num) for num in c_num]
-# plt.bar(coils, snrs, color=colors, zorder=3)
-# plt.grid(zorder=0)
-# plt.title("SNR, Bloch Siegert method")
-# plt.ylabel("SNR")
-# plt.show()
+
+fig, axs = plt.subplots(1, 1)
+axs.set_ylim([0, 90])
+coil_snrs = {
+    readouts[0]:[],
+    readouts[1]:[],
+    readouts[2]:[]
+ }
+for i, readout in enumerate(readouts):
+    for j in range(len(coils)):
+        coil_snrs[readout].append(calculated_snrs[j][i])
+#print(coil_snrs)
+positions = np.arange(len(coils))
+width = 0.2
+multiplier = 0 
+for attribute, snrs_coil in coil_snrs.items():
+    offset = width*multiplier
+    rects = axs.bar(positions+offset, snrs_coil, width, label=attribute)
+    axs.bar_label(rects, padding=3, rotation="vertical")
+    multiplier += 1
+#axs.grid(zorder=0)
+axs.set_title("SNR, Calculated ref NEMA")
+axs.set_ylabel("SNR")
+axs.set_xticks(positions+width, coils, rotation=25)
+axs.legend(loc="upper left")
+plt.show()
 
 """ FLIP BOOK FUNCTION """
 
