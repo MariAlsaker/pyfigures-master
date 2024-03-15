@@ -40,6 +40,19 @@ def show_as_video(im_array, vmax:int=1, gif_name:str=None):
         writergif = animation.FFMpegWriter(fps=30)
         ani.save("Figures/"+gif_name, writer=writergif)
 
+def create_circular_mask(h, w, center=None, radius=None):
+
+    if center is None: # use the middle of the image
+        center = (int(w/2), int(h/2))
+    if radius is None: # use the smallest distance between the center and image walls
+        radius = min(center[0], center[1], w-center[0], h-center[1])
+
+    Y, X = np.ogrid[:h, :w]
+    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+
+    mask = dist_from_center <= radius
+    return mask 
+
 def calculate_SNR(S_values, N_values):
     sd = np.std(N_values)
     signal = np.mean(S_values)
@@ -68,6 +81,9 @@ def blurring_2D(img, kernel_size, padding=0, rep=1, gaussian=False):
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage", "BirdcageEnh"] # "Birdcage2nd"
+y = [23, 60] # From birdcage 2552 plot
+radius=(y[1]-y[0])/2
+im_centers = [[38, 40], [38, 40], [43, 40], [39, 40], [20+radius, 23+radius], [20+radius, 23+radius]]
 readouts = ["197", "1402", "2552"]
 kspace_samp = ["10", "12", "25"]
 resolution = ["4.5", "3", "3"]
@@ -136,6 +152,8 @@ for k, coil in enumerate(coils):
             blurred_norm = blurred/np.max(blurred)
             blurred_norm = np.ma.where(blurred_norm>0.25, blurred_norm, np.ones_like(blurred_norm))
             new = normalized_field_magn[current_index]/blurred_norm
+            # circ_mask = create_circular_mask(h=total_len, w=total_len, center=im_centers[k], radius=radius)
+            # new = new * circ_mask
             axs[i+1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
         snr_calc = calculate_SNR(signal_squares, noise_squares)
         snrs_this_coil.append(snr_calc)
@@ -144,7 +162,7 @@ for k, coil in enumerate(coils):
     cbar_ax = fig.add_axes([0.15, 0.1, 0.7, 0.05])
     cb = fig.colorbar(img, label="Normalized", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-    #plt.show()
+    plt.show()
     plt.close("all")
 
 
@@ -202,3 +220,26 @@ plt.show()
 # prev_button.on_clicked(lambda event: update_plot(forward=False))
 
 
+""" FIND CIRCLE OF PHANTOM """
+# im_volume = np.load(numpy_files_path+f"Birdcage_2552_X.npy")
+# abs_array = abs(im_volume)
+# maximum = np.max(abs_array)
+# normalized_field_magn = abs_array/maximum
+# total_len = len(normalized_field_magn)
+# current_index = int(total_len/2)
+
+# y = [23, 60]
+# radius=(y[1]-y[0])/2
+# center = [20+radius, 23+radius]
+# print(center)
+
+# len_1d = len(normalized_field_magn[current_index])
+# circ_mask = create_circular_mask(h=len_1d, w=len_1d, center=center, radius=diffx/2)
+# #print(circ_mask)
+
+# img = plt.imshow(normalized_field_magn[current_index]*circ_mask, cmap=my_cmap, vmin=0, vmax=1) 
+# plt.xlabel("x")
+# plt.ylabel("y")
+# plt.colorbar(img, label="Normalized") #cax=cbar_ax, location="bottom"
+# plt.title(f"Birdcage coil,\n2552 readouts, 3x3x3, 25% k-space sampling")
+# plt.show()
