@@ -103,9 +103,9 @@ def plot_smith(ax, reals, ims, c, magn_db, fillstyle="full"):
     """ ax must be projection=smith """
     vals_s11 = (reals + ims * 1j)
     min_index = np.argmin(magn_db)
-    plots = ax.plot(vals_s11, markevery=1, datatype=SmithAxes.S_PARAMETER)
+    plots = ax.plot(vals_s11, markevery=1, datatype=SmithAxes.S_PARAMETER, markersize=1)
     plots[0].set(color=c)
-    plots = ax.plot(vals_s11[min_index], markevery=1, datatype=SmithAxes.S_PARAMETER, markersize=20, fillstyle=fillstyle)
+    plots = ax.plot(vals_s11[min_index], markevery=1, datatype=SmithAxes.S_PARAMETER, markersize=10, fillstyle=fillstyle)
     plots[0].set(color=c, marker="o", fillstyle=fillstyle)
 
 def find_mean_s11(num_files, file_path, filename, ending=".s1p", file_len = 301):
@@ -167,8 +167,8 @@ coils = [
      "file_loc": f"{folder_pocketvna}Enhancing/",
      "ymin": -5}
 ]
-c_load = "steelblue"
-c_noload = "orange"
+c_load = cmap(0.2)
+c_noload = cmap(0.8)
 loadfile = "siemens"
 noloadfile = "noload"
 
@@ -182,8 +182,8 @@ for coil in coils:
     fig = plt.figure(figsize=[10, 5])
     ax1 = fig.add_subplot(1,2,1)
     ax1.vlines(x=[33.78], ymin=coil["ymin"], ymax=1, colors="k", linestyles="--", label="f0=33.78MHz", zorder=0)
-    err_line1 = ax1.errorbar(freqs1, magn1_db, yerr=std_data1[3], zorder=1)
-    err_line2 = ax1.errorbar(freqs2, magn2_db, yerr=std_data2[3], zorder=1)
+    err_line1 = ax1.errorbar(freqs1, magn1_db, yerr=std_data1[3], zorder=1, color=c_load)
+    err_line2 = ax1.errorbar(freqs2, magn2_db, yerr=std_data2[3], zorder=1, color=c_noload)
     err_line1.set_label("loaded")
     err_line2.set_label("unloaded")
     ax1.grid(True)
@@ -191,14 +191,14 @@ for coil in coils:
     # Plotting smith charts
     min_index1 = plot_res(ax=ax1, magn_db=magn1_db, freqs=freqs1, color=c_load)
     plot_smith(ax=ax2, reals=reals1, ims=ims1, c=c_load, magn_db=magn1_db)
-    min_index2 = plot_res(ax=ax1, magn_db=magn2_db, freqs=freqs2, color=c_noload)
-    plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c_noload, magn_db=magn2_db)
+    min_index2 = plot_res(ax=ax1, magn_db=magn2_db, freqs=freqs2, color=c_noload, fillstyle="left")
+    plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c_noload, magn_db=magn2_db, fillstyle="left")
         
     ax1.legend()
     fig.suptitle(f"Laboratory tests of the {name} coil")
     ax1.set_title("|S11| magnitude")
     ax2.set_title("Real and imaginary impedance (Smith chart)")
-    plt.savefig(f's11 {name}.png', transparent=True)
+    #plt.savefig(f's11 {name}.png', transparent=True)
     print("STD of magnitude loaded = ", std_data1[3][min_index1-1:min_index1+2])
     print("STD of magnitude unloaded = ", std_data2[3][min_index2-1:min_index2+2])
 
@@ -217,7 +217,7 @@ plt.close("all")
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
 show_quad_plots = True
-save = True
+save = False
 print_impedance = False
 print_Qs_quad = True
 
@@ -231,7 +231,7 @@ figs = plt.figure(figsize=[7, 6]), plt.figure(figsize=[7, 6])
 smithfig = plt.figure(figsize=[6,6])
 smithax = smithfig.add_subplot(1,1,1, projection="smith")
 Qs = []
-colors = [cmap(0.2), "silver", "dimgray", cmap(0.8)]
+colors = [[cmap(0.2), "silver", "dimgray", cmap(0.4)], [cmap(0.6), "silver", "dimgray", cmap(0.8)]]
 loadTF = ["siemens phantom", "nothing"]
 for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     print(f"*** Load = {loadTF[i]} ***")
@@ -246,16 +246,15 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     else:
         names = ["s_11 no load", "s_21 no load", "s_12 no load", "s_22 no load"]
         fill="left"
-    plot_Sparams(ax=ax, freqs=freqs_q, s_magns_db=values[1], colors=colors, names=names)
-    min_i_first = plot_res(ax, magn_db=values[1][0], freqs=freqs_q, color=colors[0], fillstyle=fill)
-    min_i_switch = plot_res(ax, magn_db=values[1][3], freqs=freqs_q, color=colors[3], fillstyle=fill)
+    plot_Sparams(ax=ax, freqs=freqs_q, s_magns_db=values[1], colors=colors[i], names=names)
+    min_i_first = plot_res(ax, magn_db=values[1][0], freqs=freqs_q, color=colors[i][0], fillstyle=fill)
+    min_i_switch = plot_res(ax, magn_db=values[1][3], freqs=freqs_q, color=colors[i][3], fillstyle=fill)
     print(f"Minimums indexes = {min_i_first}, {min_i_switch}")
     ax.set_title(f"S parameter magnitudes,\nquadrature coil was loaded with {loadTF[i]}")
     ax.legend()
     if save:    
         figs[i].savefig(f"quad_magn_{i}.png", transparent=True)
-        if i ==1:
-            smithfig.savefig("quad_smith.png", transparent=True)
+        
 
     if print_impedance:
         print(f"Impedance [Ohm] at resonance for quadrature coils: ")
@@ -269,15 +268,17 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     Qs.append((Q_switch+Q_first)/2)
 
     plot_smith(ax=smithax, reals=s_11s[1], ims=s_11s[2], 
-               c=colors[0], magn_db=(s_11s[3]), fillstyle=fill)
+               c=colors[i][0], magn_db=(s_11s[3]), fillstyle=fill)
     plot_smith(ax=smithax, reals=s_22s[1], ims=s_22s[2], 
-               c=colors[-1], magn_db=(s_22s[3]), fillstyle=fill)
+               c=colors[i][-1], magn_db=(s_22s[3]), fillstyle=fill)
     diffs = [freqs_q[i+1]-freqs_q[i] for i in range(len(freqs_q)-1)]
     mean_diff = np.mean(diffs)
     print(f"Uncertainties for magnitude with load {loadTF[i]} at resonance: ",
           f"\n> u_f0 = {mean_diff} MHz",
           f"\n> u_s11 = {values[2][0][min_i_first]:.1f} dB ",
           f"\n> u_s22 = {values[2][3][min_i_switch]:.1f} dB")
+    if save: 
+        smithfig.savefig("quad_smith.png", transparent=True)
 
 if print_Qs_quad:
     print("\nQ of quadrature coil:") 
