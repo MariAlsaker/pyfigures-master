@@ -59,18 +59,19 @@ def calculate_SNR(S_values, N_values):
     snr = 0.655 *signal/sd
     return snr
 
-def gaussianKernel(size, sigma, twoDimensional=True):
-    if twoDimensional:
-        kernel = np.fromfunction(lambda x, y: (1/(2*np.pi*sigma**2)) * np.e ** ((-1*((x-(size-1)/2)**2+(y-(size-1)/2)**2))/(2*sigma**2)), (size, size))
-    else:
-        kernel = np.fromfunction(lambda x: np.e ** ((-1*(x-(size-1)/2)**2) / (2*sigma**2)), (size,))
-    return kernel / np.sum(kernel)
+# def gaussianKernel(size, sigma, twoDimensional=True):
+#     if twoDimensional:
+#         kernel = np.fromfunction(lambda x, y: (1/(2*np.pi*sigma**2)) * np.e ** ((-1*((x-(size-1)/2)**2+(y-(size-1)/2)**2))/(2*sigma**2)), (size, size))
+#     else:
+#         kernel = np.fromfunction(lambda x: np.e ** ((-1*(x-(size-1)/2)**2) / (2*sigma**2)), (size,))
+#     return kernel / np.sum(kernel)
 
-def blurring_2D(img, kernel_size, padding=0, rep=1, gaussian=False):
-    if gaussian:
-        k = gaussianKernel(kernel_size, sigma=3)
-    else:
-        k = np.ones((kernel_size))/kernel_size
+def blurring_2D(img, kernel_size, padding=0, rep=1):
+    # if gaussian:
+    #     k = gaussianKernel(kernel_size, sigma=3)
+    #     print(k.shape)
+    # else:
+    k = np.ones((kernel_size))/kernel_size
     out = img.copy()
     if padding != 0:
         np.pad(out, pad_width=padding, mode="constant")
@@ -110,9 +111,9 @@ for k, coil in enumerate(coils):
             if splitted[0] == "f0:":
                 f0 = int(splitted[-2])
                 f0s.append(f0)
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
     axs = axs.flatten()
-    fig.suptitle(f"Normalized magnitude plots for 3D cones sequence with {coil} coil,\n SNR={snr:.2f}, f0={f0} (Bloch Siegert)")
+    fig.suptitle(f"Magnitude plots for 3D cones UTE sequence with {coil} coil,\nBloch Siegert optimization yielded: SNR={snr:.2f}, f0={f0}Hz")
     snrs_this_coil = []
     for i, ros in enumerate(readouts):
         im_volume = np.load(numpy_files_path+f"{coil}_{ros}_X.npy")
@@ -146,26 +147,33 @@ for k, coil in enumerate(coils):
         img = axs[i].imshow(normalized_field_magn[current_index], cmap=my_cmap, vmin=0, vmax=1) 
         axs[i].set_xlabel("x")
         axs[i].set_ylabel("y")
-        axs[i].set_title(f"{ros} readouts, {resolution[i]}x{resolution[i]}x{resolution[i]}, {kspace_samp[i]}% k-space sampling")
+        axs[i].set_title(f"{ros} readouts,\n{resolution[i]}x{resolution[i]}x{resolution[i]} resolution, {kspace_samp[i]}% k-space sampling", fontsize = 10)
         if i == len(readouts)-1 and k <4:
-            blurred = blurring_2D(normalized_field_magn[current_index], kernel_size=3, padding=1, rep=5)
+            blurred = blurring_2D(normalized_field_magn[current_index], kernel_size=3, padding=1, rep=3)
             blurred_norm = blurred/np.max(blurred)
             blurred_norm = np.ma.where(blurred_norm>0.25, blurred_norm, np.ones_like(blurred_norm))
             new = normalized_field_magn[current_index]/blurred_norm
             # circ_mask = create_circular_mask(h=total_len, w=total_len, center=im_centers[k], radius=radius)
             # new = new * circ_mask
             axs[i+1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
+            axs[i+1].set_xlabel("x")
+            axs[i+1].set_ylabel("y")
+            axs[i+1].set_title(f"{ros} ro, {resolution[i]}x{resolution[i]}x{resolution[i]} res, {kspace_samp[i]}% k samp\nB_1 inhomogeneity correction by blurring", fontsize = 10)
+        elif i == len(readouts)-1:
+            axs[i+1].axis("off")
         snr_calc = calculate_SNR(signal_squares, noise_squares)
         snrs_this_coil.append(snr_calc)
     calculated_snrs.append(snrs_this_coil)
+    fig.tight_layout(pad=1.0)
     fig.subplots_adjust(bottom=0.2)
-    cbar_ax = fig.add_axes([0.15, 0.1, 0.7, 0.05])
+    cbar_ax = fig.add_axes([0.15, 0.08, 0.75, 0.03])
     cb = fig.colorbar(img, label="Normalized", cax=cbar_ax, location="bottom")
-    #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
+    fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
     plt.show()
     plt.close("all")
 
 
+cmap = mpl.colormaps.get_cmap("plasma")
 fig, axs = plt.subplots(1, 1)
 axs.set_ylim([0, 90])
 coil_snrs = {
@@ -180,9 +188,10 @@ for i, readout in enumerate(readouts):
 positions = np.arange(len(coils))
 width = 0.2
 multiplier = 0 
+colors = (cmap(0.3), cmap(0.6), cmap(0.9))
 for attribute, snrs_coil in coil_snrs.items():
     offset = width*multiplier
-    rects = axs.bar(positions+offset, snrs_coil, width, label=attribute)
+    rects = axs.bar(positions+offset, snrs_coil, width, label=attribute, color=colors[multiplier])
     axs.bar_label(rects, padding=3, rotation="vertical")
     multiplier += 1
 #axs.grid(zorder=0)

@@ -151,7 +151,7 @@ def find_mean_allS(num_files, file_path, filename, ending=".s2p", file_len = 301
 
 
 """ SINGLE LOOP COIL PLOTS AND MEASUREMENTS """
-print_Qs_single = False
+print_Qs_single = True
 
 coils = [
     {"name" : "Single loop",
@@ -174,6 +174,7 @@ noloadfile = "noload"
 
 for coil in coils:
     name = coil["name"]
+    print(f"\n{name} coil:")
     mean_data1, std_data1 = find_mean_s11(num_files=10, file_path=coil["file_loc"], filename=loadfile, ending=".s2p", file_len=1001)
     freqs1, reals1, ims1, magn1_db, phase1 = mean_data1[0], mean_data1[1], mean_data1[2], mean_data1[3], mean_data1[4]
     mean_data2, std_data2 = find_mean_s11(num_files=10, file_path=coil["file_loc"], filename=noloadfile, ending=".s2p", file_len=1001)
@@ -199,14 +200,15 @@ for coil in coils:
     ax1.set_title("|S11| magnitude")
     ax2.set_title("Real and imaginary impedance (Smith chart)")
     #plt.savefig(f's11 {name}.png', transparent=True)
-    print("STD of magnitude loaded = ", std_data1[3][min_index1-1:min_index1+2])
-    print("STD of magnitude unloaded = ", std_data2[3][min_index2-1:min_index2+2])
+    print(f"Magnitude, freq loaded = ({mean_data1[3][min_index1]}+-{std_data1[3][min_index1]}), ({mean_data1[0][min_index1]}+-{std_data1[0][min_index1]})")
+    print(f"Magnitude, freq unloaded = ({mean_data2[3][min_index2]}+-{std_data2[3][min_index2]}), ({mean_data2[0][min_index2]}+-{std_data2[0][min_index1]})")
+    print(f"Impedance loaded ({mean_data1[1][min_index1]*50+50} + i {mean_data1[2][min_index1]*50}) Ohm")
+    print(f"Impedance unloaded ({mean_data2[1][min_index2]*50+50} + i {mean_data2[2][min_index2]*50}) Ohm")
 
     Q_load = q_factor(freqs1, magn1_db, reals1, ims1, z0=50)
     Q_noload = q_factor(freqs2, magn2_db, reals2, ims2, z0=50)
     Q_ratio = Q_noload/Q_load
     if print_Qs_single:
-        print("Q factor and ratio for single loop coil:")
         print(f"Unloaded Q = {Q_noload:.4f} and loaded Q = {Q_load:.4f}\n> Q ratio = {Q_ratio:.4f}")
 
 #plt.show()
@@ -218,7 +220,7 @@ plt.close("all")
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
 show_quad_plots = True
 save = False
-print_impedance = False
+print_impedance = True
 print_Qs_quad = True
 
 values_unloaded_quad = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/",filename=noloadfile, file_len=1001)
@@ -258,8 +260,8 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
 
     if print_impedance:
         print(f"Impedance [Ohm] at resonance for quadrature coils: ")
-        print(f"> ({s_11s[1, min_i_first]*50+50} + i {s_11s[2, min_i_first]*50}) Ohm")
-        print(f"> ({s_22s[1, min_i_switch]*50+50} + i {s_22s[2, min_i_switch]*50}) Ohm")
+        print(f"> ({s_11s[1][min_i_first]*50+50} + i {s_11s[2][min_i_first]*50}) Ohm")
+        print(f"> ({s_22s[1][min_i_switch]*50+50} + i {s_22s[2][min_i_switch]*50}) Ohm")
 
     Q_first = q_factor(freqs=freqs_q, magn_db=(s_11s[3]), reals=s_11s[1], ims=s_11s[2], z0=50)
     print("q first", Q_first)
