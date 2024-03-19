@@ -59,18 +59,7 @@ def calculate_SNR(S_values, N_values):
     snr = 0.655 *signal/sd
     return snr
 
-# def gaussianKernel(size, sigma, twoDimensional=True):
-#     if twoDimensional:
-#         kernel = np.fromfunction(lambda x, y: (1/(2*np.pi*sigma**2)) * np.e ** ((-1*((x-(size-1)/2)**2+(y-(size-1)/2)**2))/(2*sigma**2)), (size, size))
-#     else:
-#         kernel = np.fromfunction(lambda x: np.e ** ((-1*(x-(size-1)/2)**2) / (2*sigma**2)), (size,))
-#     return kernel / np.sum(kernel)
-
 def blurring_2D(img, kernel_size, padding=0, rep=1):
-    # if gaussian:
-    #     k = gaussianKernel(kernel_size, sigma=3)
-    #     print(k.shape)
-    # else:
     k = np.ones((kernel_size))/kernel_size
     out = img.copy()
     if padding != 0:
@@ -133,28 +122,26 @@ for k, coil in enumerate(coils):
             add = 15
         xsS = np.array([center[0]-S_width/2, center[0]+S_width/2])
         ysS = np.array([center[1]-S_width/2, center[1]+S_width/2])
-        signal_squares = normalized_field_magn[current_index][center[1]-S_width//2:center[1]+S_width//2+1, center[0]-S_width//2:center[0]+S_width//2+1]
+        this_img = normalized_field_magn[current_index]
+        signal_squares = this_img[center[1]-S_width//2:center[1]+S_width//2+1, center[0]-S_width//2:center[0]+S_width//2+1]
         xsN = np.array([xsS[0]-inc, xsS[1]+inc])
         ysN = np.array([ysS[0]-inc, ysS[1]+inc]) + add
         center = [center[0], center[1]+add]
-        noise_squares = normalized_field_magn[current_index][center[1]-N_width//2:center[1]+N_width//2+1, center[0]-N_width//2:center[0]+N_width//2+1]
+        noise_squares = this_img[center[1]-N_width//2:center[1]+N_width//2+1, center[0]-N_width//2:center[0]+N_width//2+1]
         for j in range(2):
             axs[i].plot([xsS[j],xsS[j]], ysS, color = "w")
             axs[i].plot(xsS, [ysS[j],ysS[j]], color = "w")
             axs[i].plot([xsN[j],xsN[j]], ysN, color = "w")
             axs[i].plot(xsN, [ysN[j],ysN[j]], color = "w")
-
-        img = axs[i].imshow(normalized_field_magn[current_index], cmap=my_cmap, vmin=0, vmax=1) 
+        img = axs[i].imshow(this_img, cmap=my_cmap, vmin=0, vmax=1) 
         axs[i].set_xlabel("x")
         axs[i].set_ylabel("y")
         axs[i].set_title(f"{ros} readouts,\n{resolution[i]}x{resolution[i]}x{resolution[i]} resolution, {kspace_samp[i]}% k-space sampling", fontsize = 10)
         if i == len(readouts)-1 and k <4:
-            blurred = blurring_2D(normalized_field_magn[current_index], kernel_size=3, padding=1, rep=3)
+            blurred = blurring_2D(this_img, kernel_size=3, padding=1, rep=3)
             blurred_norm = blurred/np.max(blurred)
             blurred_norm = np.ma.where(blurred_norm>0.25, blurred_norm, np.ones_like(blurred_norm))
-            new = normalized_field_magn[current_index]/blurred_norm
-            # circ_mask = create_circular_mask(h=total_len, w=total_len, center=im_centers[k], radius=radius)
-            # new = new * circ_mask
+            new = this_img/blurred_norm
             axs[i+1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
             axs[i+1].set_xlabel("x")
             axs[i+1].set_ylabel("y")
@@ -163,13 +150,17 @@ for k, coil in enumerate(coils):
             axs[i+1].axis("off")
         snr_calc = calculate_SNR(signal_squares, noise_squares)
         snrs_this_coil.append(snr_calc)
+        coverage = np.sum(np.where(this_img>0.50, np.ones_like(this_img), np.zeros_like(this_img)))
+        # Show coverage graphically
+        print(coil)
+        print(coverage)
     calculated_snrs.append(snrs_this_coil)
     fig.tight_layout(pad=1.0)
     fig.subplots_adjust(bottom=0.2)
     cbar_ax = fig.add_axes([0.15, 0.08, 0.75, 0.03])
     cb = fig.colorbar(img, label="Normalized", cax=cbar_ax, location="bottom")
     fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-    plt.show()
+    #plt.show()
     plt.close("all")
 
 
