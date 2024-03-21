@@ -191,8 +191,9 @@ image = np.load(numpy_files_path+"QuadratureCoil_197_X.npy")
 normalized_image = norm_magn_image(image)
 ind = int(len(normalized_image)/2)
 axs[0].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
-b1_map = 2-np.nan_to_num(b1_map, copy=True)
-axs[1].imshow(normalized_image[ind]*b1_map[ind], cmap=my_cmap)
+b1_map = 1 + np.cos(np.nan_to_num(b1_map, copy=True))
+b1_corr_quad = normalized_image[ind]*b1_map[ind]
+axs[1].imshow(b1_corr_quad, cmap=my_cmap)
 
 fig, axs = plt.subplots(1, 2)
 img1alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-60deg.npy")
@@ -202,9 +203,10 @@ image = np.load(numpy_files_path+"BirdcageEnh_197_TG50.npy")
 normalized_image = norm_magn_image(image)
 ind = int(len(normalized_image)/2)
 axs[0].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
-b1_map = 2-np.nan_to_num(b1_map, copy=True)
-axs[1].imshow(normalized_image[ind]*b1_map[ind], cmap=my_cmap)
-plt.show()
+b1_map = 1 + np.cos(np.nan_to_num(b1_map, copy=True))
+b1_corr_enh = normalized_image[ind]*b1_map[ind]
+axs[1].imshow(b1_corr_enh, cmap=my_cmap)
+#plt.show()
 plt.close("all")
 
 cmap = mpl.colormaps.get_cmap("plasma")
@@ -233,17 +235,29 @@ axs.set_title("SNR, Calculated ref NEMA")
 axs.set_ylabel("SNR")
 axs.set_xticks(positions+width, coils, rotation=25)
 axs.legend(loc="upper left")
-plt.show()
-
+# plt.show()
+plt.close("all")
 
 cvals = np.linspace(0, 1, len(coils))
+x_80 = np.linspace(0, 24, 80)
+diff_80 = x_80[1]-x_80[0]
+x_120 = np.linspace(0, 24, 120)
+diff_120 = x_120[1]-x_120[0]
 for i, lines in enumerate(coil_lines):
     fig, ax = plt.subplots(1, 1)
-    ax.set_title(f"Intensity comparison for scan with {readouts[i]} readouts")
+    if i==0: diff, extra = diff_120, 1.5/diff_120
+    else: diff, extra = diff_80, 1.5/diff_80
+    print(diff)
+    ax.set_title(f"Intensity comparison for 3D cones {readouts[i]} scan")
+    ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
     for j, line in enumerate(lines):
         line = np.flip(line)
-        ax.plot(line, color=cmap(cvals[j]), label=coils[j])
-        ax.set_xlabel("pixel") # Transform from pixel to centimeter
+        index_t = next(x[0] for x in enumerate(line) if x[1]>0.4)
+        x_0 = 0
+        start = int(index_t-extra)
+        xs = [f*diff for f in range(len(line[start:]))]
+        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=coils[j])
+        ax.set_xlabel("cm") # Transform from pixel to centimeter
         ax.set_ylabel("Normalized magnitude")
         plt.legend()
         plt.grid(True)
