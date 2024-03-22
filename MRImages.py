@@ -41,6 +41,9 @@ def show_as_video(im_array, vmax:int=1, gif_name:str=None):
         ani.save("Figures/"+gif_name, writer=writergif)
 
 def create_circular_mask(h, w, center=None, radius=None):
+    # Only used for localizing phantom
+    # radius=37/2 # found from birdcage 2552 plot
+    # im_centers = [[38, 40], [38, 40], [43, 40], [39, 40], [20+radius, 23+radius], [20+radius, 23+radius]]
     if center is None: # use the middle of the image
         center = (int(w/2), int(h/2))
     if radius is None: # use the smallest distance between the center and image walls
@@ -77,10 +80,11 @@ def blurring_2D(img, kernel_size, padding=0, rep=1):
             out = convolve1d(out, weights=k, axis=i)
     return out
 
-def plot_signal_noise_squares(ax, img, center,offset=15, S_width = 7, N_width = 11, c="w"):
+def plot_signal_noise_squares(ax, img, center,offset=15, scale = 1, c="w"):
+    S_width = int(7*scale)
+    N_width = int(11*scale)
+    offset = int(17*scale)
     diff = (N_width-S_width)/2
-    if normalized_field_magn.shape[0] == 120:
-        offset = 20
     xsS = np.array([center[0]-S_width/2, center[0]+S_width/2])
     ysS = np.array([center[1]-S_width/2, center[1]+S_width/2])
     signal_squares = img[center[1]-S_width//2:center[1]+S_width//2+1, 
@@ -104,19 +108,14 @@ def norm_magn_image(image):
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage2nd", "BirdcageEnh"] # "Birdcage2nd"
+real_names = ["Original surface coil", "Assadi's surface coil", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with enhancing coil"]
 readouts = ["197", "1402", "2552"]
 kspace_samp = ["10", "12", "25"]
 resolution = ["4.5", "3", "3"]
 
-# Only used for localizing phantom
-# radius=37/2 # found from birdcage 2552 plot
-# im_centers = [[38, 40], [38, 40], [43, 40], [39, 40], [20+radius, 23+radius], [20+radius, 23+radius]]
-centers = [[[58, 80], [38, 58], [38, 56]], # Orig
-           [[58, 80], [38, 57], [38, 56]], # Assadi
-           [[65, 77], [43, 58], [42, 55]], # Single
-           [[60, 78], [38, 59], [39, 56]], # Quad
-           [[58, 77], [38, 56], [38, 53]], # Birdcage
-           [[58, 75], [38, 55], [38, 53]]] # Enhanced
+centers3 = [[38, 55], [38, 54], [42, 54], [39, 54], [38, 54], [38, 52]]
+scale = 120/80
+centers = [[[int(x*scale),int(y*scale)], [x,y], [x,y]] for x,y in centers3]
 
 snrs = []
 calculated_snrs = []
@@ -137,7 +136,8 @@ for k, coil in enumerate(coils):
                 f0s.append(f0)
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
     axs = axs.flatten()
-    fig.suptitle(f"Magnitude plots for 3D cones UTE sequence with {coil} coil,\nBloch Siegert optimization yielded: SNR={snr:.2f}, f0={f0}Hz")
+    axs[3].text(0.1, 0.6, f"{real_names[k]}", clip_on=False, fontweight="bold", fontsize="x-large")
+    axs[3].axis("off")
     snrs_this_coil = []
     lines_this_coil = []
     for i, ros in enumerate(readouts):
@@ -150,76 +150,106 @@ for k, coil in enumerate(coils):
         current_index = int(total_len/2)
         this_img = normalized_field_magn[current_index]
         img = axs[i].imshow(this_img, cmap=my_cmap, vmin=0, vmax=1) 
-        signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, 
-                                                                  center = centers[k][i])
+        if i == 0:
+            signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, scale = scale, center = centers[k][i])
+        else:
+            signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, center = centers[k][i])
         axs[i].set_xlabel("x")
         axs[i].set_ylabel("y")
-        axs[i].set_title(f"{ros} readouts,\n{resolution[i]}x{resolution[i]}x{resolution[i]} resolution, {kspace_samp[i]}% k-space sampling", fontsize = 10)
+        axs[i].axis("off")
+        axs[i].text(5, 5, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
         snr_calc = calculate_SNR(signal_squares, noise_squares)
+        plt.tight_layout( pad=0)
         snrs_this_coil.append(snr_calc)
         coil_lines[i][k] = normalized_field_magn[current_index,:,centers[k][i][0]]
-        #coverage = np.sum(np.where(this_img>0.50, np.ones_like(this_img), np.zeros_like(this_img)))
-        # Show coverage graphically
-        # print(coil)
-        # print(coverage)
     calculated_snrs.append(snrs_this_coil)
-    fig.tight_layout(pad=1.0)
-    fig.subplots_adjust(bottom=0.2)
-    cbar_ax = fig.add_axes([0.15, 0.08, 0.75, 0.03])
-    cb = fig.colorbar(img, label="Normalized", cax=cbar_ax, location="bottom")
+    cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
+    cb = fig.colorbar(img, label="Normalized magnitude", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-    #plt.show()
-    plt.close("all")
-
-# B1 CORRECTIONS
-# image = 12
-# blurred = blurring_2D(image, kernel_size=3, padding=1, rep=3)
-# blurred_norm = blurred/np.max(blurred)
-# blurred_norm_region = np.ma.where(blurred_norm>0.25, blurred_norm, np.ones_like(blurred_norm))
-# new = this_img/blurred_norm_region
-# axs[i+1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
-# axs[i+1].set_xlabel("x")
-# axs[i+1].set_ylabel("y")
-# axs[i+1].set_title(f"{ros} ro, {resolution[i]}x{resolution[i]}x{resolution[i]} res, {kspace_samp[i]}% k samp\nB_1 inhomogeneity correction by blurring" )
-
-
-fig, axs = plt.subplots(1, 2)
-img1alpha = np.load(numpy_files_path+"QuadratureCoil_197_60deg.npy")
-img2alpha = np.load(numpy_files_path+"QuadratureCoil_197_120deg.npy")
-b1_map = b1_field_map(im1alpha=img1alpha, im2alpha=img2alpha, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3)
-image = np.load(numpy_files_path+"QuadratureCoil_197_X.npy")
-normalized_image = norm_magn_image(image)
-ind = int(len(normalized_image)/2)
-axs[0].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
-b1_map = 1 + np.cos(np.nan_to_num(b1_map, copy=True))
-b1_corr_quad = normalized_image[ind]*b1_map[ind]
-axs[1].imshow(b1_corr_quad, cmap=my_cmap)
-
-fig, axs = plt.subplots(1, 2)
-img1alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-60deg.npy")
-img2alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-120deg.npy")
-b1_map = b1_field_map(im1alpha=img1alpha, im2alpha=img2alpha, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3)
-image = np.load(numpy_files_path+"BirdcageEnh_197_TG50.npy")
-normalized_image = norm_magn_image(image)
-ind = int(len(normalized_image)/2)
-axs[0].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
-b1_map = 1 + np.cos(np.nan_to_num(b1_map, copy=True))
-b1_corr_enh = normalized_image[ind]*b1_map[ind]
-axs[1].imshow(b1_corr_enh, cmap=my_cmap)
 #plt.show()
 plt.close("all")
 
+# B1 CORRECTION - blurred version
+for coil in coils[-2:]:
+    for r in readouts:
+        image = np.load(numpy_files_path+f"{coil}_{r}_TG50.npy")
+        image = norm_magn_image(image)
+        ind = int(len(image)/2)
+        image_slice = image[ind]
+        fig, axs = plt.subplots(1, 2, figsize=(8, 4))
+        axs[0].imshow(image_slice, cmap=my_cmap)
+        blurred_slice = blurring_2D(image_slice, kernel_size=3, padding=1, rep=3)
+        blurred_norm = blurred_slice/np.max(blurred_slice)
+        blurred_norm_region = np.ma.where(blurred_norm>0.1, blurred_norm, np.ones_like(blurred_norm))
+        new = image_slice/blurred_norm_region
+        axs[1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
+        for i,ax in enumerate(axs):
+            ax.axis("off")
+            ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+        plt.tight_layout(pad=0)
+        fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
+        plt.show()
+
+# B1 CORRECTION - b1 field map
+fig, axs = plt.subplots(1, 3, figsize=(9, 3))
+plt.tight_layout(pad=0)
+img1alpha = np.load(numpy_files_path+"QuadratureCoil_197_60deg.npy")
+img2alpha = np.load(numpy_files_path+"QuadratureCoil_197_120deg.npy")
+image = np.load(numpy_files_path+"QuadratureCoil_197_X.npy")
+fa_map = b1_field_map(im1alpha=img1alpha, im2alpha=img2alpha, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3) # Flip angle is proportional to RF field strength
+fa_map = np.nan_to_num(fa_map, copy=True, nan=0)
+fa_max = np.max(fa_map)
+print(fa_max)
+f_corr = 1+fa_map/fa_max
+normalized_image = norm_magn_image(image)
+ind = int(len(normalized_image)/2)
+axs[1].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
+axs[0].imshow(fa_map[ind], cmap="plasma" ,vmin=np.pi/4, vmax=np.pi/2)
+b1_corr_quad = norm_magn_image( normalized_image[ind]/f_corr[ind])
+axs[2].imshow(b1_corr_quad, cmap=my_cmap, vmin=0, vmax=1)
+for i,ax in enumerate(axs):
+    ax.axis("off")
+    ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+plt.tight_layout(pad=0)
+#fig.savefig(f"Quad_b1_DA_corr.png", dpi=300 ,transparent=True)
+
+fig, axs = plt.subplots(1, 3, figsize=(9, 3))
+for ax in axs:
+    ax.axis("off")
+img1alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-60deg.npy")
+img2alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-120deg.npy")
+image = np.load(numpy_files_path+"BirdcageEnh_197_TG50.npy")
+fa_map = b1_field_map(im1alpha=img1alpha, im2alpha=img2alpha, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3) # Flip angle is proportional to RF field strength
+fa_map = np.nan_to_num(fa_map, copy=True, nan=0)
+fa_max = np.max(fa_map)
+print(fa_max)
+f_corr = 1+fa_map/fa_max
+normalized_image = norm_magn_image(image)
+ind = int(len(normalized_image)/2)
+axs[1].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
+axs[0].imshow(fa_map[ind], cmap="plasma" ,vmin=np.pi/4, vmax=np.pi/2)
+b1_corr_quad = norm_magn_image( normalized_image[ind]/f_corr[ind])
+axs[2].imshow(b1_corr_quad, cmap=my_cmap, vmin=0, vmax=1)
+for i,ax in enumerate(axs):
+    ax.axis("off")
+    ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+plt.tight_layout(pad=0)
+plt.close("all")
+#fig.savefig(f"Enh_b1_DA_corr.png", dpi=300 ,transparent=True)
+
+
 cmap = mpl.colormaps.get_cmap("plasma")
-fig, axs = plt.subplots(1, 1)
+fig, axs = plt.subplots(1, 1, figsize = (7, 6))
 axs.set_ylim([0, 90])
+scans = ["3D cones 1", "3D cones 2", "3D cones 3"]
 coil_snrs = {
-    readouts[0]:[],
-    readouts[1]:[],
-    readouts[2]:[]
+    scans[0]:[],
+    scans[1]:[],
+    scans[2]:[]
  }
-for i, readout in enumerate(readouts):
+for i, scan in enumerate(scans):
     for j in range(len(coils)):
-        coil_snrs[readout].append(calculated_snrs[j][i])
+        coil_snrs[scan].append(calculated_snrs[j][i])
 #print(coil_snrs)
 positions = np.arange(len(coils))
 width = 0.2
@@ -228,14 +258,14 @@ colors = (cmap(0.3), cmap(0.6), cmap(0.9))
 for attribute, snrs_coil in coil_snrs.items():
     offset = width*multiplier
     rects = axs.bar(positions+offset, snrs_coil, width, label=attribute, color=colors[multiplier])
-    axs.bar_label(rects, padding=3, rotation="vertical")
+    axs.bar_label(rects, padding=3, rotation="vertical", fmt="%.0f")
     multiplier += 1
-#axs.grid(zorder=0)
-axs.set_title("SNR, Calculated ref NEMA")
+axs.set_title("SNR calculated from MR images")
 axs.set_ylabel("SNR")
 axs.set_xticks(positions+width, coils, rotation=25)
 axs.legend(loc="upper left")
-# plt.show()
+plt.show()
+fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
 cvals = np.linspace(0, 1, len(coils))
@@ -244,11 +274,10 @@ diff_80 = x_80[1]-x_80[0]
 x_120 = np.linspace(0, 24, 120)
 diff_120 = x_120[1]-x_120[0]
 for i, lines in enumerate(coil_lines):
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=(8,6))
     if i==0: diff, extra = diff_120, 1.5/diff_120
     else: diff, extra = diff_80, 1.5/diff_80
-    print(diff)
-    ax.set_title(f"Intensity comparison for 3D cones {readouts[i]} scan")
+    ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
     ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
     for j, line in enumerate(lines):
         line = np.flip(line)
@@ -259,9 +288,14 @@ for i, lines in enumerate(coil_lines):
         ax.plot(xs, line[start:], color=cmap(cvals[j]), label=coils[j])
         ax.set_xlabel("cm") # Transform from pixel to centimeter
         ax.set_ylabel("Normalized magnitude")
+        phantom_d = 11.5 #cm
+        ax.axvspan(1.2, 1.2+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         plt.grid(True)
-plt.show()
+        #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
+#plt.show()
+plt.close("all")
+
 
 """ FLIP BOOK FUNCTION """
 
