@@ -64,9 +64,9 @@ def signal_corr_infinityTR(flipangle, tr, t1):
     denom = 1-np.e**(-tr/t1)
     return num/denom
 
-def b1_field_map(im1alpha, im2alpha, alpha1, alpha2, tr, t1):
-    s1 = abs(im1alpha)*signal_corr_infinityTR(flipangle=alpha1, tr=tr, t1=t1)
-    s2 = abs(im2alpha)*signal_corr_infinityTR(flipangle=alpha2, tr=tr, t1=t1)
+def b1_field_map(img1alpha, img2alpha, alpha1, alpha2, tr, t1):
+    s1 = abs(img1alpha)*signal_corr_infinityTR(flipangle=alpha1, tr=tr, t1=t1)
+    s2 = abs(img2alpha)*signal_corr_infinityTR(flipangle=alpha2, tr=tr, t1=t1)
     teta = np.arccos(s2/(2*s1))
     return teta
 
@@ -188,55 +188,50 @@ for coil in coils[-2:]:
             ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
         plt.tight_layout(pad=0)
         fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
-        plt.show()
+        #plt.show()
+plt.close("all")
 
 # B1 CORRECTION - b1 field map
-fig, axs = plt.subplots(1, 3, figsize=(9, 3))
-plt.tight_layout(pad=0)
-img1alpha = np.load(numpy_files_path+"QuadratureCoil_197_60deg.npy")
-img2alpha = np.load(numpy_files_path+"QuadratureCoil_197_120deg.npy")
-image = np.load(numpy_files_path+"QuadratureCoil_197_X.npy")
-fa_map = b1_field_map(im1alpha=img1alpha, im2alpha=img2alpha, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3) # Flip angle is proportional to RF field strength
-fa_map = np.nan_to_num(fa_map, copy=True, nan=0)
-fa_max = np.max(fa_map)
-print(fa_max)
-f_corr = 1+fa_map/fa_max
-normalized_image = norm_magn_image(image)
-ind = int(len(normalized_image)/2)
-axs[1].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
-axs[0].imshow(fa_map[ind], cmap="plasma" ,vmin=np.pi/4, vmax=np.pi/2)
-b1_corr_quad = norm_magn_image( normalized_image[ind]/f_corr[ind])
-axs[2].imshow(b1_corr_quad, cmap=my_cmap, vmin=0, vmax=1)
-for i,ax in enumerate(axs):
-    ax.axis("off")
-    ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
-plt.tight_layout(pad=0)
-#fig.savefig(f"Quad_b1_DA_corr.png", dpi=300 ,transparent=True)
+def b1_corr_doubleangle(img60, img120, method="multiply"):
+    b1map = b1_field_map(img1alpha=img60, img2alpha=img120, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3) # Flip angle is proportional to RF field strength, i.e. a map of b1
+    b1map = np.nan_to_num(b1map, copy=True, nan=0.001)
+    fa_max = np.max(b1map)
+    if method=="multiply":
+        # Reversing - no flip angle multiplied by one, the others less to reduce difference
+        correction_map = 1-b1map/fa_max 
+    elif method=="divide": 
+        # Preparing for division - no flip angle is divided by one, the others more to reduce difference
+        correction_map = 1+b1map/fa_max
+    else:
+        Exception(f"Method \"{method}\" is invalid")
+    return b1map, correction_map
 
-fig, axs = plt.subplots(1, 3, figsize=(9, 3))
-for ax in axs:
-    ax.axis("off")
-img1alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-60deg.npy")
-img2alpha = np.load(numpy_files_path+"BirdcageEnh_197_TG50-120deg.npy")
-image = np.load(numpy_files_path+"BirdcageEnh_197_TG50.npy")
-fa_map = b1_field_map(im1alpha=img1alpha, im2alpha=img2alpha, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3) # Flip angle is proportional to RF field strength
-fa_map = np.nan_to_num(fa_map, copy=True, nan=0)
-fa_max = np.max(fa_map)
-print(fa_max)
-f_corr = 1+fa_map/fa_max
-normalized_image = norm_magn_image(image)
-ind = int(len(normalized_image)/2)
-axs[1].imshow(normalized_image[ind], cmap=my_cmap, vmin=0, vmax=1)
-axs[0].imshow(fa_map[ind], cmap="plasma" ,vmin=np.pi/4, vmax=np.pi/2)
-b1_corr_quad = norm_magn_image( normalized_image[ind]/f_corr[ind])
-axs[2].imshow(b1_corr_quad, cmap=my_cmap, vmin=0, vmax=1)
-for i,ax in enumerate(axs):
-    ax.axis("off")
-    ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
-plt.tight_layout(pad=0)
+names_b1_corr_files = ["QuadratureCoil_197", "BirdcageEnh_197_TG50"]
+
+for name in names_b1_corr_files:
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
+    axs = axs.flatten()
+    plt.tight_layout(pad=0)
+    img1alpha = np.load(numpy_files_path+f"{name}_60deg.npy")
+    img2alpha = np.load(numpy_files_path+f"{name}_120deg.npy")
+    image = np.load(numpy_files_path+f"{name}_X.npy")
+    b1map, correction_mul = b1_corr_doubleangle(img60=img1alpha, img120=img2alpha, method="multiply")
+    _, correction_div = b1_corr_doubleangle(img60=img1alpha, img120=img2alpha, method="divide")
+    normalized_img = norm_magn_image(image)
+    ind = int(len(normalized_img)/2)
+    corrected_img_mul = norm_magn_image( normalized_img[ind]*correction_mul[ind])
+    corrected_img_div = norm_magn_image( normalized_img[ind]/correction_div[ind])
+    axs[0].imshow(b1map[ind], cmap="plasma" ,vmin=np.pi/4, vmax=np.pi/2)
+    imgs = [normalized_img[ind], corrected_img_mul, corrected_img_div]
+    for i,ax in enumerate(axs):
+        ax.axis("off")
+        ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+        if i>0:
+            axs[i].imshow(imgs[i-1], cmap=my_cmap, vmin=0, vmax=1)
+    plt.tight_layout(pad=0)
+    plt.show()
+    # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
 plt.close("all")
-#fig.savefig(f"Enh_b1_DA_corr.png", dpi=300 ,transparent=True)
-
 
 cmap = mpl.colormaps.get_cmap("plasma")
 fig, axs = plt.subplots(1, 1, figsize = (7, 6))
@@ -264,8 +259,8 @@ axs.set_title("SNR calculated from MR images")
 axs.set_ylabel("SNR")
 axs.set_xticks(positions+width, coils, rotation=25)
 axs.legend(loc="upper left")
-plt.show()
-fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
+#plt.show()
+#fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
 cvals = np.linspace(0, 1, len(coils))
