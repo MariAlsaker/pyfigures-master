@@ -158,28 +158,26 @@ for k, coil in enumerate(coils):
 plt.close("all")
 
 # B1 CORRECTION - blurred version
-for coil in coils[-2:]:
-    for r in readouts:
-        image = np.load(numpy_files_path+f"{coil}_{r}_TG50.npy")#_TG50
-        image = norm_magn_image(image)
-        ind = int(len(image)/2)
-        image_slice = image[ind]
-        #image_slice = np.ma.where(image_slice<0.01, np.ones_like(image_slice)*0.01, image_slice)
-        fig, axs = plt.subplots(1, 3, figsize=(10, 4))
-        axs[0].imshow(image_slice, cmap=my_cmap)
-        blurred_slice = blurring_2D(image_slice, kernel_size=3, padding=1, rep=3)
-        blurred_norm = blurred_slice#/np.max(blurred_slice)
-        blurred_norm = np.ma.where(blurred_slice<0.3, np.ones_like(blurred_slice), blurred_slice)
-        #blurred_norm_region = np.ma.where(blurred_norm>0.1, blurred_norm, np.ones_like(blurred_norm))
-        blurr_div = image_slice/blurred_norm
-        axs[1].imshow(blurred_norm, cmap=my_cmap, vmin=0, vmax=1)
-        axs[2].imshow(blurr_div, cmap=my_cmap, vmin=0, vmax=1)
-        for i,ax in enumerate(axs):
-            ax.axis("off")
-            ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
-        plt.tight_layout(pad=0)
-        #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
-        #plt.show()
+for coil in coils[:-2]: #[-2:]
+    r="197"
+    image = np.load(numpy_files_path+f"{coil}_{r}_X.npy") #_TG50
+    image = norm_magn_image(image)
+    ind = int(len(image)/2)
+    image_slice = image[ind]
+    fig, axs = plt.subplots(1, 3, figsize=(10, 4))
+    axs[0].imshow(image_slice, cmap=my_cmap)
+    blurred_slice = blurring_2D(image_slice, kernel_size=8, padding=1, rep=3)
+    blurred_norm = blurred_slice/np.max(blurred_slice)
+    blurred_norm = np.ma.where(blurred_slice<0.15, np.ones_like(blurred_slice), blurred_slice)
+    blurr_div = image_slice/blurred_norm
+    axs[1].imshow(blurred_norm, cmap=my_cmap)
+    axs[2].imshow(blurr_div, cmap=my_cmap)
+    for i,ax in enumerate(axs):
+        ax.axis("off")
+        ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+    plt.tight_layout(pad=0)
+    #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
+    plt.show()
 plt.close("all")
 
 # B1 CORRECTION - b1 field map
@@ -306,11 +304,11 @@ for i, lines in enumerate(coil_lines):
         offset_from_coil = 1.2
         ax.set(xlim=(0, 22), ylim=(0, 1))
         im = ax.imshow(phantom_img_theory, extent=[17,20,0.5,0.65], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
+        ax.plot([17+(20-17)/2, 17+(20-17)/2], [0.5, 0.65], "k-")
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
-        #plt.grid(True, zorder=10)
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
@@ -340,5 +338,3 @@ plt.close("all")
 # # Connect buttons to update functions
 # next_button.on_clicked(lambda event: update_plot(forward=True))
 # prev_button.on_clicked(lambda event: update_plot(forward=False))
-
-
