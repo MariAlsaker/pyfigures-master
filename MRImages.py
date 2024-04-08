@@ -59,17 +59,6 @@ def calculate_SNR(S_values, N_values):
     snr = 0.655 *signal/sd
     return snr
 
-def signal_corr_infinityTR(flipangle, tr, t1):
-    num = 1-np.cos(flipangle)*np.e**(-tr/t1)
-    denom = 1-np.e**(-tr/t1)
-    return num/denom
-
-def b1_field_map(img1alpha, img2alpha, alpha1, alpha2, tr, t1):
-    s1 = abs(img1alpha)*signal_corr_infinityTR(flipangle=alpha1, tr=tr, t1=t1)
-    s2 = abs(img2alpha)*signal_corr_infinityTR(flipangle=alpha2, tr=tr, t1=t1)
-    teta = np.arccos(s2/(2*s1))
-    return teta
-
 def blurring_2D(img, kernel_size, padding=0, rep=1):
     k = np.ones((kernel_size))/kernel_size
     out = img.copy()
@@ -139,7 +128,6 @@ for k, coil in enumerate(coils):
     axs[3].text(0.1, 0.6, f"{real_names[k]}", clip_on=False, fontweight="bold", fontsize="x-large")
     axs[3].axis("off")
     snrs_this_coil = []
-    lines_this_coil = []
     for i, ros in enumerate(readouts):
         if k>3:
             im_volume = np.load(numpy_files_path+f"{coil}_{ros}_TG50.npy")
@@ -172,28 +160,37 @@ plt.close("all")
 # B1 CORRECTION - blurred version
 for coil in coils[-2:]:
     for r in readouts:
-        image = np.load(numpy_files_path+f"{coil}_{r}_TG50.npy")
+        image = np.load(numpy_files_path+f"{coil}_{r}_TG50.npy")#_TG50
         image = norm_magn_image(image)
         ind = int(len(image)/2)
         image_slice = image[ind]
-        fig, axs = plt.subplots(1, 2, figsize=(8, 4))
+        #image_slice = np.ma.where(image_slice<0.01, np.ones_like(image_slice)*0.01, image_slice)
+        fig, axs = plt.subplots(1, 3, figsize=(10, 4))
         axs[0].imshow(image_slice, cmap=my_cmap)
         blurred_slice = blurring_2D(image_slice, kernel_size=3, padding=1, rep=3)
-        blurred_norm = blurred_slice/np.max(blurred_slice)
-        blurred_norm_region = np.ma.where(blurred_norm>0.1, blurred_norm, np.ones_like(blurred_norm))
-        new = image_slice/blurred_norm_region
-        axs[1].imshow(new, cmap=my_cmap, vmin=0, vmax=1)
+        blurred_norm = blurred_slice#/np.max(blurred_slice)
+        blurred_norm = np.ma.where(blurred_slice<0.3, np.ones_like(blurred_slice), blurred_slice)
+        #blurred_norm_region = np.ma.where(blurred_norm>0.1, blurred_norm, np.ones_like(blurred_norm))
+        blurr_div = image_slice/blurred_norm
+        axs[1].imshow(blurred_norm, cmap=my_cmap, vmin=0, vmax=1)
+        axs[2].imshow(blurr_div, cmap=my_cmap, vmin=0, vmax=1)
         for i,ax in enumerate(axs):
             ax.axis("off")
             ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
         plt.tight_layout(pad=0)
-        fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
+        #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
         #plt.show()
 plt.close("all")
 
 # B1 CORRECTION - b1 field map
+def signal_corr_infinityTR(flipangle, tr, t1):
+    num = 1-np.cos(flipangle)*np.e**(-tr/t1)
+    denom = 1-np.e**(-tr/t1)
+    return num/denom
 def b1_corr_doubleangle(img60, img120, method="multiply"):
-    b1map = b1_field_map(img1alpha=img60, img2alpha=img120, alpha1=60, alpha2=120, tr=100*1E-3, t1=40*1E-3) # Flip angle is proportional to RF field strength, i.e. a map of b1
+    s1 = abs(img60)*signal_corr_infinityTR(flipangle=60, tr=100*1E-3, t1=40*1E-3)
+    s2 = abs(img120)*signal_corr_infinityTR(flipangle=120, tr=100*1E-3, t1=40*1E-3)
+    b1map = np.arccos(s2/(2*s1))
     b1map = np.nan_to_num(b1map, copy=True, nan=0.001)
     fa_max = np.max(b1map)
     if method=="multiply":
@@ -229,10 +226,11 @@ for name in names_b1_corr_files:
         if i>0:
             axs[i].imshow(imgs[i-1], cmap=my_cmap, vmin=0, vmax=1)
     plt.tight_layout(pad=0)
-    plt.show()
+    #plt.show()
     # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
 plt.close("all")
 
+# Coil SNR plot
 cmap = mpl.colormaps.get_cmap("plasma")
 fig, axs = plt.subplots(1, 1, figsize = (7, 6))
 axs.set_ylim([0, 90])
@@ -245,7 +243,6 @@ coil_snrs = {
 for i, scan in enumerate(scans):
     for j in range(len(coils)):
         coil_snrs[scan].append(calculated_snrs[j][i])
-#print(coil_snrs)
 positions = np.arange(len(coils))
 width = 0.2
 multiplier = 0 
@@ -263,7 +260,29 @@ axs.legend(loc="upper left")
 #fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
-cvals = np.linspace(0, 1, len(coils))
+# Show circle of phantom
+phantom_image = np.load(numpy_files_path+f"Birdcage_2552_X.npy")
+abs_phantom = abs(phantom_image)
+maximum = np.max(abs_phantom)
+normalized_phantom = abs_phantom/maximum
+total_len = len(normalized_phantom)
+current_index = int(total_len/2)
+y = [23, 60]
+radius=(y[1]-y[0])/2
+center = [20+radius, 23+radius]
+len_1d = len(normalized_phantom[current_index])
+circ_mask = create_circular_mask(h=len_1d, w=len_1d, center=center, radius=radius)
+phantom_img_theory = np.ones_like(normalized_phantom[current_index])*circ_mask*-1
+# Actual line plots
+linestyle_tuple = [
+     "solid",
+     "dotted", 
+     "dashed",
+     "dashdot",
+     (0, (5, 1)), # densely dashed
+     (0, (10, 3)), # long dashed
+     (0, (3, 1, 1, 1))] #densely dashdotted
+cvals = np.linspace(0, 0.8, len(coils))
 x_80 = np.linspace(0, 24, 80)
 diff_80 = x_80[1]-x_80[0]
 x_120 = np.linspace(0, 24, 120)
@@ -280,15 +299,18 @@ for i, lines in enumerate(coil_lines):
         x_0 = 0
         start = int(index_t-extra)
         xs = [f*diff for f in range(len(line[start:]))]
-        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=coils[j])
+        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=coils[j], linestyle=linestyle_tuple[j])
         ax.set_xlabel("cm") # Transform from pixel to centimeter
         ax.set_ylabel("Normalized magnitude")
         phantom_d = 11.5 #cm
-        ax.axvspan(1.2, 1.2+phantom_d, facecolor="lightgray", alpha=0.1)
+        offset_from_coil = 1.2
+        ax.set(xlim=(0, 22), ylim=(0, 1))
+        im = ax.imshow(phantom_img_theory, extent=[17,20,0.5,0.65], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
+        ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
-        plt.grid(True)
+        #plt.grid(True, zorder=10)
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 
@@ -320,26 +342,3 @@ plt.close("all")
 # prev_button.on_clicked(lambda event: update_plot(forward=False))
 
 
-""" FIND CIRCLE OF PHANTOM """
-# im_volume = np.load(numpy_files_path+f"Birdcage_2552_X.npy")
-# abs_array = abs(im_volume)
-# maximum = np.max(abs_array)
-# normalized_field_magn = abs_array/maximum
-# total_len = len(normalized_field_magn)
-# current_index = int(total_len/2)
-
-# y = [23, 60]
-# radius=(y[1]-y[0])/2
-# center = [20+radius, 23+radius]
-# print(center)
-
-# len_1d = len(normalized_field_magn[current_index])
-# circ_mask = create_circular_mask(h=len_1d, w=len_1d, center=center, radius=diffx/2)
-# #print(circ_mask)
-
-# img = plt.imshow(normalized_field_magn[current_index]*circ_mask, cmap=my_cmap, vmin=0, vmax=1) 
-# plt.xlabel("x")
-# plt.ylabel("y")
-# plt.colorbar(img, label="Normalized") #cax=cbar_ax, location="bottom"
-# plt.title(f"Birdcage coil,\n2552 readouts, 3x3x3, 25% k-space sampling")
-# plt.show()
