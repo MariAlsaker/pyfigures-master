@@ -6,6 +6,16 @@ import matplotlib.pyplot as plt
 # Save all your calculations here and use them in other files.
 # Example: plane_at, loop induction calc, conductance_calc, bin_to_hex, trace_from_stl, ...
 
+linestyle_tuple = [
+     "solid",
+     "dashed",
+     "dotted", 
+     "dashdot",
+     (0, (3, 1, 1, 1)), # densely dashdotted
+     (0, (5, 1)), # densely dashed
+     (0, (10, 2))] # long dashed
+
+
 def plane_at(slice="x=00", extent=50):
     xx = np.linspace(-extent, extent, 100, endpoint=True)
     zz = np.linspace(-extent, extent, 100, endpoint=True)

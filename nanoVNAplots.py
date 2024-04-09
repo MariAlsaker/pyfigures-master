@@ -8,6 +8,7 @@ collections.MutableSet = collections.abc.MutableSet
 collections.MutableMapping = collections.abc.MutableMapping
 from smithplot import SmithAxes
 import matplotlib as mpl
+from utils import linestyle_tuple
 
 folder_nanovna = "/Users/marialsaker/nanovnasaver_files/"
 folder_pocketvna = "/Users/marialsaker/pocketVNAfiles/"
@@ -68,9 +69,13 @@ def plot_magn_phase(ax, freq_lists, magn_db_lists, phase_list, magn_colors, phas
     ax.grid(True)
     return
 
-def plot_Sparams(ax, freqs, s_magns_db, colors, names):
+def plot_Sparams(ax, freqs, s_magns_db, colors, names, mainstyle=None):
+    if mainstyle==None:
+        styles= ["solid", "dashdot", linestyle_tuple[4] ,"dotted"]
+    else:
+        styles = [mainstyle, "dashdot", linestyle_tuple[4], mainstyle]
     for i, s_magn in enumerate(s_magns_db):
-        plots = ax.plot(freqs, (s_magn), label=names[i])#, marker=".")
+        plots = ax.plot(freqs, (s_magn), label=names[i], linestyle=styles[i])#, marker=".")
         plots[0].set(color = colors[i])
         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
     ax.set_xlabel("Frequency [MHz]")
@@ -99,14 +104,14 @@ def q_factor(freqs, magn_db, reals, ims, z0):
     dX = (n*(np.sum(pos_slopews*Xs)) - np.sum(pos_slopews)*np.sum(Xs)) / (n*np.sum(pos_slopews**2) - np.sum(pos_slopews)**2)
     return freqs[index_w0]/(2*R+2*z0) * dX
 
-def plot_smith(ax, reals, ims, c, magn_db, fillstyle="full"):
+def plot_smith(ax, reals, ims, c, magn_db, style, fillstyle="full"):
     """ ax must be projection=smith """
     vals_s11 = (reals + ims * 1j)
     min_index = np.argmin(magn_db)
     plots = ax.plot(vals_s11, markevery=1, datatype=SmithAxes.S_PARAMETER, markersize=1)
-    plots[0].set(color=c)
+    plots[0].set(color=c, linestyle=style)
     plots = ax.plot(vals_s11[min_index], markevery=1, datatype=SmithAxes.S_PARAMETER, markersize=10, fillstyle=fillstyle)
-    plots[0].set(color=c, marker="o", fillstyle=fillstyle)
+    plots[0].set(color=c, marker="o", fillstyle=fillstyle, linestyle=style)
 
 def find_mean_s11(num_files, file_path, filename, ending=".s1p", file_len = 301):
     for i in range(num_files):
@@ -183,23 +188,22 @@ for coil in coils:
     fig = plt.figure(figsize=[10, 5])
     ax1 = fig.add_subplot(1,2,1)
     ax1.vlines(x=[33.78], ymin=coil["ymin"], ymax=1, colors="k", linestyles="--", label="f0=33.78MHz", zorder=0)
-    err_line1 = ax1.errorbar(freqs1, magn1_db, yerr=std_data1[3], zorder=1, color=c_load)
-    err_line2 = ax1.errorbar(freqs2, magn2_db, yerr=std_data2[3], zorder=1, color=c_noload)
-    err_line1.set_label("loaded")
-    err_line2.set_label("unloaded")
+    err_line1 = ax1.plot(freqs1, magn1_db, zorder=1, color=c_load, linestyle=linestyle_tuple[0], label="loaded")
+    err_line2 = ax1.plot(freqs2, magn2_db, zorder=1, color=c_noload, linestyle=linestyle_tuple[1], label="unloaded")
     ax1.grid(True)
     ax2 = fig.add_subplot(1,2,2, projection="smith")
     # Plotting smith charts
     min_index1 = plot_res(ax=ax1, magn_db=magn1_db, freqs=freqs1, color=c_load)
-    plot_smith(ax=ax2, reals=reals1, ims=ims1, c=c_load, magn_db=magn1_db)
+    plot_smith(ax=ax2, reals=reals1, ims=ims1, c=c_load, magn_db=magn1_db, style=linestyle_tuple[0])
     min_index2 = plot_res(ax=ax1, magn_db=magn2_db, freqs=freqs2, color=c_noload, fillstyle="left")
-    plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c_noload, magn_db=magn2_db, fillstyle="left")
+    plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c_noload, magn_db=magn2_db, style=linestyle_tuple[1], fillstyle="left")
         
     ax1.legend()
     fig.suptitle(f"Laboratory tests of the {name} coil")
     ax1.set_title("|S11| magnitude")
     ax2.set_title("Real and imaginary impedance (Smith chart)")
     #plt.savefig(f's11 {name}.png', transparent=True)
+
     print(f"Magnitude, freq loaded = ({mean_data1[3][min_index1]}+-{std_data1[3][min_index1]}), ({mean_data1[0][min_index1]}+-{std_data1[0][min_index1]})")
     print(f"Magnitude, freq unloaded = ({mean_data2[3][min_index2]}+-{std_data2[3][min_index2]}), ({mean_data2[0][min_index2]}+-{std_data2[0][min_index1]})")
     print(f"Impedance loaded ({mean_data1[1][min_index1]*50+50} + i {mean_data1[2][min_index1]*50}) Ohm")
@@ -218,7 +222,7 @@ plt.close("all")
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = True
+show_quad_plots = False
 save = False
 print_impedance = True
 print_Qs_quad = True
@@ -248,7 +252,7 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     else:
         names = ["s_11 no load", "s_21 no load", "s_12 no load", "s_22 no load"]
         fill="left"
-    plot_Sparams(ax=ax, freqs=freqs_q, s_magns_db=values[1], colors=colors[i], names=names)
+    plot_Sparams(ax=ax, freqs=freqs_q, s_magns_db=values[1], colors=colors[i], mainstyle=linestyle_tuple[i], names=names)
     min_i_first = plot_res(ax, magn_db=values[1][0], freqs=freqs_q, color=colors[i][0], fillstyle=fill)
     min_i_switch = plot_res(ax, magn_db=values[1][3], freqs=freqs_q, color=colors[i][3], fillstyle=fill)
     print(f"Minimums indexes = {min_i_first}, {min_i_switch}")
@@ -270,9 +274,9 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     Qs.append((Q_switch+Q_first)/2)
 
     plot_smith(ax=smithax, reals=s_11s[1], ims=s_11s[2], 
-               c=colors[i][0], magn_db=(s_11s[3]), fillstyle=fill)
+               c=colors[i][0], magn_db=(s_11s[3]), style=linestyle_tuple[i], fillstyle=fill)
     plot_smith(ax=smithax, reals=s_22s[1], ims=s_22s[2], 
-               c=colors[i][-1], magn_db=(s_22s[3]), fillstyle=fill)
+               c=colors[i][-1], magn_db=(s_22s[3]), style=linestyle_tuple[i], fillstyle=fill)
     diffs = [freqs_q[i+1]-freqs_q[i] for i in range(len(freqs_q)-1)]
     mean_diff = np.mean(diffs)
     print(f"Uncertainties for magnitude with load {loadTF[i]} at resonance: ",
@@ -293,40 +297,49 @@ else:
     plt.close("all")
 
 
-# """ HYBRID PLOTS AND MEASUREMENTS """
+""" HYBRID PLOTS AND MEASUREMENTS """
 
-# hybrid_data = ["hybrid_setup1_isoSMA", "hybrid_setup6_isoBNC", "hybrid_setup2_through", "hybrid_setup3_through", 
-#                "hybrid_setup4_through", "hybrid_setup5_through"]
-# hybrid_setups = ["Hybrid, coil coax","Hybrid, MRI coax", "Hybrid through, green to same", "Hybrid through, green to opposite", 
-#                "Hybrid through, blue to same", "Hybrid through, blue to opposite"]
-# width, height = 9, 5
-# rows, cols = 1, 2
-# axs = []
-# for i in range(3):
-#     fig = plt.figure(figsize=[width, height])
-#     ax = fig.subplots(rows, cols)
-#     axs.append(ax)
-# colors = [cmap(0.2), cmap(0.4), cmap(0.6), cmap(0.8)]
-# labels = ["s_11", "s_21", "s_12", "s_22"]
-# axs = [axs[0][0], axs[0][1], axs[1][0], axs[1][1], axs[2][0], axs[2][1]]
-# prev = 0
-# for i, name in enumerate(hybrid_data):
-#     vals = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/Hybrid/",filename=name, file_len=501)
-#     freqs_h = vals[0][0]
-#     res = next(x for x, val in enumerate(freqs_h) if val > 33.775)
-#     plot_Sparams(ax=axs[i], freqs=freqs_h, s_magns_db=vals[1], colors=colors, names=labels)
-#     axs[i].vlines(x=[33.78],ymin=-55, ymax=1, colors=["k"], linestyles="--", label="f=33.78MHz")
-#     axs[i].set_title(hybrid_setups[i])
-#     axs[i].legend()
-#     print("\n", hybrid_setups[i])
-#     s_sequence = ["S_11", "S_22", "S_21", "S_12"]
-#     # mean_data, std_magn_db, mean_magn_db, mean_phase, std_phase
-#     for i in range(4):
-#         print(f"Mag of {s_sequence[i]} = {vals[1][i][res]:.5f} +/- {vals[2][i][res]:.5f}")
-#         print(f"Phase of {s_sequence[i]} = {vals[3][i][res]:.5f} +/- {vals[4][i][res]:.5f}")
+hybrid_data = ["hybrid_setup1_isoSMA", "hybrid_setup6_isoBNC", "hybrid_setup2_through", "hybrid_setup3_through", 
+               "hybrid_setup4_through", "hybrid_setup5_through"]
+hybrid_setups = ["Hybrid, coil coax","Hybrid, MRI coax", "Hybrid through, green to same", "Hybrid through, green to opposite", 
+               "Hybrid through, blue to same", "Hybrid through, blue to opposite"]
+width, height = 5, 4
+rows, cols = 1, 1
+figs = []
+axs = []
+for i in range(6):
+    fig = plt.figure(figsize=[width, height])
+    figs.append(fig)
+    ax = fig.subplots(rows, cols)
+    axs.append(ax)
+colors = [cmap(0.2), cmap(0.4), cmap(0.6), cmap(0.8)]
+labels = ["s_11", "s_21", "s_12", "s_22"]
+prev = 0
+for i, name in enumerate(hybrid_data):
+    vals = find_mean_allS(num_files=10, file_path=folder_pocketvna+"Quad_loop/Hybrid/",filename=name, file_len=501)
+    freqs_h = vals[0][0]
+    res = next(x for x, val in enumerate(freqs_h) if val > 33.775)
+    plot_Sparams(ax=axs[i], freqs=freqs_h, s_magns_db=vals[1], colors=colors, names=labels)
+    if i<2:
+        ymin=-50
+    else:
+        ymin=-20
+    axs[i].vlines(x=[33.78],ymin=ymin, ymax=1, colors=["k"], linestyles="--", label="f=33.78MHz")
+    #axs[i].set_title(hybrid_setups[i])
+    axs[i].legend(loc='lower left')
+    print("\n", hybrid_setups[i])
+    s_sequence = ["S_11", "S_22", "S_21", "S_12"]
+    # mean_data, std_magn_db, mean_magn_db, mean_phase, std_phase
+    for i in range(4):
+        print(f"Mag of {s_sequence[i]} = {vals[1][i][res]:.5f} +/- {vals[2][i][res]:.5f}")
+        print(f"Phase of {s_sequence[i]} = {vals[3][i][res]:.5f} +/- {vals[4][i][res]:.5f}")
+i=0
+for fig in figs:
+    #figs[i].savefig(f"hybrid{i+1}", transparent=True, dpi=300)
+    i= i+1
 
-# print(f"\nPhase difference green s21 is {0.103-(-1.383):.3f} +/- {np.sqrt(0.004**2+0.002**2):.3f}")
-# print(f"Phase difference green s12 is {0.098-(-1.378):.3f} +/- {np.sqrt(0.003**2+0.003**2):.3f}")
-# print(f"Phase difference blue s21 is {0.116-(-1.370):.3f} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
-# print(f"Phase difference blue s12 is {0.112-(-1.368):.3f} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
-# plt.show()
+print(f"\nPhase difference green s21 is {0.103-(-1.383):.3f} +/- {np.sqrt(0.004**2+0.002**2):.3f}")
+print(f"Phase difference green s12 is {0.098-(-1.378):.3f} +/- {np.sqrt(0.003**2+0.003**2):.3f}")
+print(f"Phase difference blue s21 is {0.116-(-1.370):.3f} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
+print(f"Phase difference blue s12 is {0.112-(-1.368):.3f} +/- {np.sqrt(0.006**2+0.002**2):.3f}")
+plt.show()

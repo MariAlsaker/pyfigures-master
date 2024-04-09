@@ -5,6 +5,7 @@ import matplotlib.animation as animation
 from matplotlib.widgets import Button
 import matplotlib as mpl
 import numpy as np
+from utils import linestyle_tuple
 
 my_cmap = "gist_gray" # "tab20", "plasma"
 
@@ -271,14 +272,6 @@ len_1d = len(normalized_phantom[current_index])
 circ_mask = create_circular_mask(h=len_1d, w=len_1d, center=center, radius=radius)
 phantom_img_theory = np.ones_like(normalized_phantom[current_index])*circ_mask*-1
 # Actual line plots
-linestyle_tuple = [
-     "solid",
-     "dotted", 
-     "dashed",
-     "dashdot",
-     (0, (5, 1)), # densely dashed
-     (0, (10, 3)), # long dashed
-     (0, (3, 1, 1, 1))] #densely dashdotted
 cvals = np.linspace(0, 0.8, len(coils))
 x_80 = np.linspace(0, 24, 80)
 diff_80 = x_80[1]-x_80[0]
