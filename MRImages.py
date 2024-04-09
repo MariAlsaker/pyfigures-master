@@ -133,10 +133,10 @@ for k, coil in enumerate(coils):
             im_volume = np.load(numpy_files_path+f"{coil}_{ros}_TG50.npy")
         else:
             im_volume = np.load(numpy_files_path+f"{coil}_{ros}_X.npy")
-        normalized_field_magn = norm_magn_image(im_volume)
-        total_len = len(normalized_field_magn)
+        total_len = len(im_volume)
         current_index = int(total_len/2)
-        this_img = normalized_field_magn[current_index]
+        this_img = np.abs(im_volume[current_index])
+        this_img = this_img/np.max(this_img)
         img = axs[i].imshow(this_img, cmap=my_cmap, vmin=0, vmax=1) 
         if i == 0:
             signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, scale = scale, center = centers[k][i])
@@ -149,12 +149,12 @@ for k, coil in enumerate(coils):
         snr_calc = calculate_SNR(signal_squares, noise_squares)
         plt.tight_layout( pad=0)
         snrs_this_coil.append(snr_calc)
-        coil_lines[i][k] = normalized_field_magn[current_index,:,centers[k][i][0]]
+        coil_lines[i][k] = this_img[:,centers[k][i][0]]
     calculated_snrs.append(snrs_this_coil)
     cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
     cb = fig.colorbar(img, label="Normalized magnitude", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 # B1 CORRECTION - blurred version
@@ -175,8 +175,8 @@ for coil in coils[-2:]: #[:-2]
         ax.axis("off")
         ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
     plt.tight_layout(pad=0)
-    fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
-    plt.show()
+    #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
+    #plt.show()
 plt.close("all")
 
 # B1 CORRECTION - b1 field map
@@ -307,7 +307,7 @@ for i, lines in enumerate(coil_lines):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 
