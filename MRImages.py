@@ -158,25 +158,24 @@ for k, coil in enumerate(coils):
 plt.close("all")
 
 # B1 CORRECTION - blurred version
-for coil in coils[:-2]: #[-2:]
+for coil in coils[-2:]: #[:-2]
     r="197"
-    image = np.load(numpy_files_path+f"{coil}_{r}_X.npy") #_TG50
-    image = norm_magn_image(image)
+    image = np.load(numpy_files_path+f"{coil}_{r}_TG50.npy") #_TG50
     ind = int(len(image)/2)
-    image_slice = image[ind]
+    image_slice = np.abs(image[ind]/np.max(image[ind]))
     fig, axs = plt.subplots(1, 3, figsize=(10, 4))
     axs[0].imshow(image_slice, cmap=my_cmap)
-    blurred_slice = blurring_2D(image_slice, kernel_size=8, padding=1, rep=3)
+    blurred_slice = blurring_2D(image_slice, kernel_size=3, padding=1, rep=3)
     blurred_norm = blurred_slice/np.max(blurred_slice)
-    blurred_norm = np.ma.where(blurred_slice<0.15, np.ones_like(blurred_slice), blurred_slice)
+    blurred_norm = np.ma.where(blurred_norm<0.15, np.ones_like(blurred_norm), blurred_norm)
     blurr_div = image_slice/blurred_norm
-    axs[1].imshow(blurred_norm, cmap=my_cmap)
+    axs[1].imshow(blurred_slice, cmap=my_cmap)
     axs[2].imshow(blurr_div, cmap=my_cmap)
     for i,ax in enumerate(axs):
         ax.axis("off")
         ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
     plt.tight_layout(pad=0)
-    #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
+    fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
     plt.show()
 plt.close("all")
 
