@@ -146,8 +146,6 @@ for k, coil in enumerate(coils):
             signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, scale = scale, center = centers[k][i])
         else:
             signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, center = centers[k][i])
-        axs[i].set_xlabel("x")
-        axs[i].set_ylabel("y")
         axs[i].axis("off")
         axs[i].text(5, 5, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
         snr_calc = calculate_SNR(signal_squares, noise_squares)
@@ -190,18 +188,21 @@ def signal_corr_infinityTR(flipangle, tr, t1):
     num = 1-np.cos(flipangle)*np.e**(-tr/t1)
     denom = 1-np.e**(-tr/t1)
     return num/denom
+
 def b1_corr_doubleangle(img60, img120, method="multiply"):
     s1 = abs(img60)*signal_corr_infinityTR(flipangle=60, tr=100*1E-3, t1=40*1E-3)
     s2 = abs(img120)*signal_corr_infinityTR(flipangle=120, tr=100*1E-3, t1=40*1E-3)
     b1map = np.arccos(s2/(2*s1))
     b1map = np.nan_to_num(b1map, copy=True, nan=0.001)
     fa_max = np.max(b1map)
+    print(fa_max/np.pi*180)
+    print(np.min(b1map)/np.pi*180)
     if method=="multiply":
         # Reversing - no flip angle multiplied by one, the others less to reduce difference
         correction_map = 1-b1map/fa_max 
     elif method=="divide": 
         # Preparing for division - no flip angle is divided by one, the others more to reduce difference
-        correction_map = 1+b1map/fa_max
+        correction_map = b1map/fa_max
     else:
         Exception(f"Method \"{method}\" is invalid")
     return b1map, correction_map
@@ -212,27 +213,30 @@ names_b1_corr_files = ["QuadratureCoil_197", "BirdcageEnh_197_TG50"]
 for s, name in enumerate(names_b1_corr_files):
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
     axs = axs.flatten()
-    plt.tight_layout(pad=0)
     img1alpha = np.load(numpy_files_path+f"{name}_60deg.npy")
     img2alpha = np.load(numpy_files_path+f"{name}_120deg.npy")
     image = np.load(numpy_files_path+f"{name}_X.npy")
     b1map, correction_mul = b1_corr_doubleangle(img60=img1alpha, img120=img2alpha, method="multiply")
-    _, correction_div = b1_corr_doubleangle(img60=img1alpha, img120=img2alpha, method="divide")
     normalized_img = norm_magn_image(image)
     ind = int(len(normalized_img)/2)
     corrected_img_mul = norm_magn_image( normalized_img[ind]*correction_mul[ind])
-    corrected_img_div = norm_magn_image( normalized_img[ind]/correction_div[ind])
-    axs[0].imshow(b1map[ind], cmap="plasma" ,vmin=np.pi/4, vmax=np.pi/2)
-    imgs = [normalized_img[ind], corrected_img_mul, corrected_img_div]
+    b1_map_img = axs[0].imshow(b1map[ind], cmap="plasma" ,vmin=0, vmax=1)
+    imgs = [normalized_img[ind], corrected_img_mul]
     for i,ax in enumerate(axs):
         ax.axis("off")
-        ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
-        if i>0:
-            axs[i].imshow(imgs[i-1], cmap=my_cmap, vmin=0, vmax=1)
-    plt.tight_layout(pad=0)
-    #plt.show()
+        if i == 0:
+            ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+        elif i>0 and i<3:
+            ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
+            last_img = axs[i].imshow(imgs[i-1], cmap=my_cmap, vmin=0, vmax=1)
+    for img_to_cb in [(b1_map_img, 0.35, "Normalized flip angle (90 degrees)"), 
+                      (last_img, 0.2, "Normalized magnitude")]:
+        cbar1_ax = fig.add_axes([0.55, img_to_cb[1], 0.4, 0.03])
+        cb1 = fig.colorbar(img_to_cb[0], label=img_to_cb[2], cax=cbar1_ax, location="bottom")
+    plt.tight_layout( pad=0)
     # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
     coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers[indices[s]][0][0]]
+plt.show()
 plt.close("all")
 
 """ Coil SNR plot """
@@ -251,8 +255,6 @@ for i, scan in enumerate(scans):
 positions = np.arange(len(coils))
 width = 0.2
 multiplier = 0 
-print(cmap(0.3))
-print(mpl.colors.to_rgba("white"))
 colors = (cmap(0.3), cmap(0.6), cmap(0.9))
 edgecolors = [(1.0, 1.0, 1.0, 0.4) for i in range(len(coil_snrs))]
 hatches = ("/", "x", "O")
@@ -266,7 +268,7 @@ axs.set_title("SNR calculated from MR images")
 axs.set_ylabel("SNR")
 axs.set_xticks(positions+width, coils, rotation=25)
 axs.legend(loc="upper left")
-plt.show()
+#plt.show()
 #fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
@@ -313,7 +315,7 @@ for i, lines in enumerate(coil_line_dicts):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
@@ -344,7 +346,7 @@ plt.close("all")
 # next_button.on_clicked(lambda event: update_plot(forward=True))
 # prev_button.on_clicked(lambda event: update_plot(forward=False))
 
-save = False
+save = True
 if save:
     num = 1
     for line_dict in coil_line_dicts:
