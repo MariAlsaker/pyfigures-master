@@ -13,7 +13,8 @@ linestyle_tuple = [
      "dashdot",
      (0, (3, 1, 1, 1)), # densely dashdotted
      (0, (5, 1)), # densely dashed
-     (0, (10, 2))] # long dashed
+     (0, (10, 2)), # long dashed
+     (0, (4, 1, 2, 1))] # varied dashes
 
 
 def plane_at(slice="x=00", extent=50):

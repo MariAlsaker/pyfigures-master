@@ -98,7 +98,7 @@ def norm_magn_image(image):
     return magn_image/max_magn
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
-coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage2nd", "BirdcageEnh"] # "Birdcage2nd"
+coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage2nd", "BirdcageEnh"] 
 real_names = ["Original surface coil", "Assadi's surface coil", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with enhancing coil"]
 readouts = ["197", "1402", "2552"]
 kspace_samp = ["10", "12", "25"]
@@ -110,9 +110,6 @@ centers = [[[int(x*scale),int(y*scale)], [x,y], [x,y]] for x,y in centers3]
 
 snrs = []
 calculated_snrs = []
-coil_lines = [ np.zeros(shape=(len(coils), 120)),
-              np.zeros(shape=(len(coils), 80)),
-              np.zeros(shape=(len(coils), 80)) ]
 empty80 = np.zeros(shape=(len(coils), 80))
 empty120 = np.zeros(shape=(len(coils), 120))
 coil_line_dicts = [ dict(zip(coils, [empty120 for i in range(len(coils))])),
@@ -156,7 +153,6 @@ for k, coil in enumerate(coils):
         snr_calc = calculate_SNR(signal_squares, noise_squares)
         plt.tight_layout( pad=0)
         snrs_this_coil.append(snr_calc)
-        coil_lines[i][k] = this_img[:,centers[k][i][0]]
         coil_line_dicts[i][coil] = this_img[:,centers[k][i][0]]
     calculated_snrs.append(snrs_this_coil)
     cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
@@ -165,16 +161,8 @@ for k, coil in enumerate(coils):
 #plt.show()
 plt.close("all")
 
-save = False
-if save:
-    num = 1
-    for line_dict in coil_line_dicts:
-        df_lines_197 = pd.DataFrame(line_dict).to_csv(f"coil_lines_{num}.csv")
-        num=num+1
 
-
-
-# B1 CORRECTION - blurred version
+""" B1 CORRECTION - blurred version """
 for coil in coils[-2:]: #[:-2]
     r="197"
     image = np.load(numpy_files_path+f"{coil}_{r}_TG50.npy") #_TG50
@@ -196,7 +184,8 @@ for coil in coils[-2:]: #[:-2]
     #plt.show()
 plt.close("all")
 
-# B1 CORRECTION - b1 field map
+
+""" B1 CORRECTION - b1 field map """
 def signal_corr_infinityTR(flipangle, tr, t1):
     num = 1-np.cos(flipangle)*np.e**(-tr/t1)
     denom = 1-np.e**(-tr/t1)
@@ -217,9 +206,10 @@ def b1_corr_doubleangle(img60, img120, method="multiply"):
         Exception(f"Method \"{method}\" is invalid")
     return b1map, correction_map
 
+indices = [3,5]
 names_b1_corr_files = ["QuadratureCoil_197", "BirdcageEnh_197_TG50"]
 
-for name in names_b1_corr_files:
+for s, name in enumerate(names_b1_corr_files):
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
     axs = axs.flatten()
     plt.tight_layout(pad=0)
@@ -242,9 +232,10 @@ for name in names_b1_corr_files:
     plt.tight_layout(pad=0)
     #plt.show()
     # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
+    coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers[indices[s]][0][0]]
 plt.close("all")
 
-# Coil SNR plot
+""" Coil SNR plot """
 cmap = mpl.colormaps.get_cmap("plasma")
 fig, axs = plt.subplots(1, 1, figsize = (7, 6))
 axs.set_ylim([0, 90])
@@ -279,7 +270,8 @@ plt.show()
 #fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
-# Show circle of phantom
+
+""" Show circle of phantom """
 phantom_image = np.load(numpy_files_path+f"Birdcage_2552_X.npy")
 abs_phantom = abs(phantom_image)
 maximum = np.max(abs_phantom)
@@ -292,25 +284,25 @@ center = [20+radius, 23+radius]
 len_1d = len(normalized_phantom[current_index])
 circ_mask = create_circular_mask(h=len_1d, w=len_1d, center=center, radius=radius)
 phantom_img_theory = np.ones_like(normalized_phantom[current_index])*circ_mask*-1
-# Actual line plots
-cvals = np.linspace(0, 0.8, len(coils))
+""" Actual line plots """
 x_80 = np.linspace(0, 24, 80)
 diff_80 = x_80[1]-x_80[0]
 x_120 = np.linspace(0, 24, 120)
 diff_120 = x_120[1]-x_120[0]
-for i, lines in enumerate(coil_lines):
+for i, lines in enumerate(coil_line_dicts):
     fig, ax = plt.subplots(1, 1, figsize=(8,6))
     if i==0: diff, extra = diff_120, 1.5/diff_120
     else: diff, extra = diff_80, 1.5/diff_80
     ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
     ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
-    for j, line in enumerate(lines):
+    cvals = np.linspace(0, 0.8, len(lines.keys()))
+    for j, line in enumerate(lines.values()):
         line = np.flip(line)
         index_t = next(x[0] for x in enumerate(line) if x[1]>0.4)
         x_0 = 0
         start = int(index_t-extra)
         xs = [f*diff for f in range(len(line[start:]))]
-        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=coils[j], linestyle=linestyle_tuple[j])
+        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=list(lines.keys())[j], linestyle=linestyle_tuple[j])
         ax.set_xlabel("cm") # Transform from pixel to centimeter
         ax.set_ylabel("Normalized magnitude")
         phantom_d = 11.5 #cm
@@ -321,7 +313,7 @@ for i, lines in enumerate(coil_lines):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 
@@ -351,3 +343,10 @@ plt.close("all")
 # # Connect buttons to update functions
 # next_button.on_clicked(lambda event: update_plot(forward=True))
 # prev_button.on_clicked(lambda event: update_plot(forward=False))
+
+save = False
+if save:
+    num = 1
+    for line_dict in coil_line_dicts:
+        df_lines_197 = pd.DataFrame(line_dict).to_csv(f"coil_lines_{num}.csv")
+        num=num+1
