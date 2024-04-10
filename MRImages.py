@@ -6,6 +6,7 @@ from matplotlib.widgets import Button
 import matplotlib as mpl
 import numpy as np
 from utils import linestyle_tuple
+import pandas as pd
 
 my_cmap = "gist_gray" # "tab20", "plasma"
 
@@ -112,6 +113,11 @@ calculated_snrs = []
 coil_lines = [ np.zeros(shape=(len(coils), 120)),
               np.zeros(shape=(len(coils), 80)),
               np.zeros(shape=(len(coils), 80)) ]
+empty80 = np.zeros(shape=(len(coils), 80))
+empty120 = np.zeros(shape=(len(coils), 120))
+coil_line_dicts = [ dict(zip(coils, [empty120 for i in range(len(coils))])),
+                    dict(zip(coils, [empty80 for i in range(len(coils))])),
+                    dict(zip(coils, [empty80 for i in range(len(coils))])) ]
 f0s = []
 
 for k, coil in enumerate(coils):
@@ -151,12 +157,22 @@ for k, coil in enumerate(coils):
         plt.tight_layout( pad=0)
         snrs_this_coil.append(snr_calc)
         coil_lines[i][k] = this_img[:,centers[k][i][0]]
+        coil_line_dicts[i][coil] = this_img[:,centers[k][i][0]]
     calculated_snrs.append(snrs_this_coil)
     cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
     cb = fig.colorbar(img, label="Normalized magnitude", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
+
+save = False
+if save:
+    num = 1
+    for line_dict in coil_line_dicts:
+        df_lines_197 = pd.DataFrame(line_dict).to_csv(f"coil_lines_{num}.csv")
+        num=num+1
+
+
 
 # B1 CORRECTION - blurred version
 for coil in coils[-2:]: #[:-2]
@@ -244,17 +260,22 @@ for i, scan in enumerate(scans):
 positions = np.arange(len(coils))
 width = 0.2
 multiplier = 0 
+print(cmap(0.3))
+print(mpl.colors.to_rgba("white"))
 colors = (cmap(0.3), cmap(0.6), cmap(0.9))
+edgecolors = [(1.0, 1.0, 1.0, 0.4) for i in range(len(coil_snrs))]
+hatches = ("/", "x", "O")
 for attribute, snrs_coil in coil_snrs.items():
     offset = width*multiplier
-    rects = axs.bar(positions+offset, snrs_coil, width, label=attribute, color=colors[multiplier])
+    rects = axs.bar(positions+offset, snrs_coil, width, label=attribute, color=colors[multiplier],edgecolor=edgecolors, hatch=hatches[multiplier])
+    #axs.bar(positions+offset, snrs_coil, width, color='none', )
     axs.bar_label(rects, padding=3, rotation="vertical", fmt="%.0f")
     multiplier += 1
 axs.set_title("SNR calculated from MR images")
 axs.set_ylabel("SNR")
 axs.set_xticks(positions+width, coils, rotation=25)
 axs.legend(loc="upper left")
-#plt.show()
+plt.show()
 #fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
@@ -300,7 +321,7 @@ for i, lines in enumerate(coil_lines):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
