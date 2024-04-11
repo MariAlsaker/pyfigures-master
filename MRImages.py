@@ -99,10 +99,10 @@ def norm_magn_image(image):
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage2nd", "BirdcageEnh"] 
-real_names = ["Original surface coil", "Assadi's surface coil", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with enhancing coil"]
+real_names = ["Preexisting coil 1", "Preexisting coil 2", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with enhancing coil", "Quadrature coil, corrected", "Birdcage with enhancing coil, corrected"]
 readouts = ["197", "1402", "2552"]
-kspace_samp = ["10", "12", "25"]
-resolution = ["4.5", "3", "3"]
+    #"ksamp" : ["10", "12", "25"],
+    #"res" : ["4.5", "3", "3"]
 
 centers3 = [[38, 55], [38, 54], [42, 54], [39, 54], [38, 54], [38, 52]]
 scale = 120/80
@@ -234,7 +234,7 @@ for s, name in enumerate(names_b1_corr_files):
         cbar1_ax = fig.add_axes([0.55, img_to_cb[1], 0.4, 0.03])
         cb1 = fig.colorbar(img_to_cb[0], label=img_to_cb[2], cax=cbar1_ax, location="bottom")
     plt.tight_layout( pad=0)
-    # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
+    #fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
     coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers[indices[s]][0][0]]
 plt.show()
 plt.close("all")
@@ -292,7 +292,7 @@ diff_80 = x_80[1]-x_80[0]
 x_120 = np.linspace(0, 24, 120)
 diff_120 = x_120[1]-x_120[0]
 for i, lines in enumerate(coil_line_dicts):
-    fig, ax = plt.subplots(1, 1, figsize=(8,6))
+    fig, ax = plt.subplots(1, 1, figsize=(9,7))
     if i==0: diff, extra = diff_120, 1.5/diff_120
     else: diff, extra = diff_80, 1.5/diff_80
     ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
@@ -304,7 +304,7 @@ for i, lines in enumerate(coil_line_dicts):
         x_0 = 0
         start = int(index_t-extra)
         xs = [f*diff for f in range(len(line[start:]))]
-        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=list(lines.keys())[j], linestyle=linestyle_tuple[j])
+        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=real_names[j], linestyle=linestyle_tuple[j])
         ax.set_xlabel("cm") # Transform from pixel to centimeter
         ax.set_ylabel("Normalized magnitude")
         phantom_d = 11.5 #cm
@@ -315,7 +315,7 @@ for i, lines in enumerate(coil_line_dicts):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 
@@ -346,7 +346,7 @@ plt.close("all")
 # next_button.on_clicked(lambda event: update_plot(forward=True))
 # prev_button.on_clicked(lambda event: update_plot(forward=False))
 
-save = True
+save = False
 if save:
     num = 1
     for line_dict in coil_line_dicts:
