@@ -71,20 +71,19 @@ def blurring_2D(img, kernel_size, padding=0, rep=1):
             out = convolve1d(out, weights=k, axis=i)
     return out
 
-def plot_signal_noise_squares(ax, img, center,offset=15, scale = 1, c="w"):
+def plot_signal_noise_squares(ax, img, center_sig, offset=17, scale = 1, c="w"):
     S_width = int(7*scale)
     N_width = int(11*scale)
-    offset = int(17*scale)
     diff = (N_width-S_width)/2
-    xsS = np.array([center[0]-S_width/2, center[0]+S_width/2])
-    ysS = np.array([center[1]-S_width/2, center[1]+S_width/2])
-    signal_squares = img[center[1]-S_width//2:center[1]+S_width//2+1, 
-                         center[0]-S_width//2:center[0]+S_width//2+1]
+    xsS = np.array([center_sig[0]-S_width/2, center_sig[0]+S_width/2])
+    ysS = np.array([center_sig[1]-S_width/2, center_sig[1]+S_width/2])
+    signal_squares = img[center_sig[1]-S_width//2:center_sig[1]+S_width//2+1, 
+                         center_sig[0]-S_width//2:center_sig[0]+S_width//2+1]
     xsN = np.array([xsS[0]-diff, xsS[1]+diff])
     ysN = np.array([ysS[0]-diff, ysS[1]+diff]) + offset
-    center = [center[0], center[1]+offset]
-    noise_squares = img[center[1]-N_width//2:center[1]+N_width//2+1, 
-                        center[0]-N_width//2:center[0]+N_width//2+1]
+    center_noise = [center_sig[0], center_sig[1] + offset]
+    noise_squares = img[center_noise[1]-N_width//2:center_noise[1]+N_width//2+1, 
+                        center_noise[0]-N_width//2:center_noise[0]+N_width//2+1]
     for j in range(2):
         ax.plot([xsS[j],xsS[j]], ysS, color = c)
         ax.plot(xsS, [ysS[j],ysS[j]], color = c)
@@ -99,14 +98,21 @@ def norm_magn_image(image):
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage2nd", "BirdcageEnh"] 
-real_names = ["Preexisting coil 1", "Preexisting coil 2", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with enhancing coil", "Quadrature coil, corrected", "Birdcage with enhancing coil, corrected"]
+real_names = ["Preexisting coil 1", "Preexisting coil 2", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with\nenhancing coil", "Quadrature coil, corrected", "Birdcage with enhancing coil, corrected"]
 readouts = ["197", "1402", "2552"]
     #"ksamp" : ["10", "12", "25"],
     #"res" : ["4.5", "3", "3"]
 
-centers3 = [[38, 55], [38, 54], [42, 54], [39, 54], [38, 54], [38, 52]]
+centers_spec = [[[57, 80], [37, 57], [38, 55]],  #"Preexisting coil 1"
+                [[57, 79], [38, 57], [38, 55]],  #"Preexisting coil 2" 
+                [[64, 77], [42, 57], [44, 54]],  #"Single loop coil"
+                [[60, 78], [38, 58], [39, 55]],  #"Quadrature coil"
+                [[57, 79], [38, 58], [38, 56]],  #"Birdcage coil"
+                [[57, 76], [38, 55], [38, 53]]]  #"Birdcage with enhancing coil"
+noise_offset = [[25, 15, 14], [21, 15, 13],
+                [23, 15, 14], [25, 15, 17],
+                [25, 15, 15], [25, 15, 15]]
 scale = 120/80
-centers = [[[int(x*scale),int(y*scale)], [x,y], [x,y]] for x,y in centers3]
 
 snrs = []
 calculated_snrs = []
@@ -143,15 +149,15 @@ for k, coil in enumerate(coils):
         this_img = this_img/np.max(this_img)
         img = axs[i].imshow(this_img, cmap=my_cmap, vmin=0, vmax=1) 
         if i == 0:
-            signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, scale = scale, center = centers[k][i])
+            signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, scale = scale, center_sig = centers_spec[k][i], offset=noise_offset[k][i])
         else:
-            signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, center = centers[k][i])
+            signal_squares, noise_squares = plot_signal_noise_squares(ax=axs[i], img=this_img, center_sig = centers_spec[k][i], offset=noise_offset[k][i])
         axs[i].axis("off")
         axs[i].text(5, 5, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
         snr_calc = calculate_SNR(signal_squares, noise_squares)
         plt.tight_layout( pad=0)
         snrs_this_coil.append(snr_calc)
-        coil_line_dicts[i][coil] = this_img[:,centers[k][i][0]]
+        coil_line_dicts[i][coil] = this_img[:,centers_spec[k][i][0]]
     calculated_snrs.append(snrs_this_coil)
     cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
     cb = fig.colorbar(img, label="Normalized magnitude", cax=cbar_ax, location="bottom")
@@ -235,8 +241,8 @@ for s, name in enumerate(names_b1_corr_files):
         cb1 = fig.colorbar(img_to_cb[0], label=img_to_cb[2], cax=cbar1_ax, location="bottom")
     plt.tight_layout( pad=0)
     #fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
-    coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers[indices[s]][0][0]]
-plt.show()
+    coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][0]]
+#plt.show()
 plt.close("all")
 
 """ Coil SNR plot """
@@ -266,10 +272,11 @@ for attribute, snrs_coil in coil_snrs.items():
     multiplier += 1
 axs.set_title("SNR calculated from MR images")
 axs.set_ylabel("SNR")
-axs.set_xticks(positions+width, coils, rotation=25)
+axs.set_xticks(positions+width, real_names[:-2], rotation=25)
 axs.legend(loc="upper left")
-#plt.show()
-#fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
+fig.subplots_adjust(bottom=0.15)
+plt.show()
+fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
 
@@ -315,7 +322,7 @@ for i, lines in enumerate(coil_line_dicts):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
