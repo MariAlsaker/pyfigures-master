@@ -51,7 +51,9 @@ y_headcoil = r_headcoil* np.cos(t)
 z_headcoil = r_headcoil* np.sin(t) #+ 100
 curr_lines_headcoil = []
 xs = np.linspace(0, 2*np.pi, 16)
-currs = 400*(2*8)*np.cos(xs+np.pi/16)
+part = np.pi*2/10
+partnum = 0 # max 9
+currs = 400*(2*8)*np.cos(xs+np.pi/16+partnum*part) # Changing number of part makes the field lines rotate
 currs = np.flip(currs)
 for pos in range(len(y_headcoil)):
     vertices = np.zeros((3,2))
@@ -62,27 +64,58 @@ for pos in range(len(y_headcoil)):
     curr_lines_headcoil.append( this)
 headcoil_coll = magpy.Collection(curr_lines_headcoil)
 
-# # In the MRI machine we have the coil in the x-y-plane (but really the x-z plane)
-# slice = (5, -4)
-# vertices_e_coil = np.zeros((4, 3, 11))
-# # negarc, negpos, posarc, posneg 
-# # = vertices_coil[0], vertices_coil[1], vertices_coil[2], vertices_coil[3]
-# vertices_e_coil[0], vertices_e_coil[2] = np.zeros((3,11)), np.zeros((3,11)) # fra minus til pluss, fra pluss til minus
-# vertices_e_coil[0][0], vertices_e_coil[0][1], vertices_e_coil[0][2] = np.ones((11))*-42.5, final_arc[0][slice[0]:slice[1]], final_arc[1][slice[0]:slice[1]]
-# vertices_e_coil[2][0], vertices_e_coil[2][1], vertices_e_coil[2][2] = np.ones((11))*42.5, np.flip(final_arc[0][slice[0]:slice[1]]), np.flip(final_arc[1][slice[0]:slice[1]])
-# vertices_e_coil[1], vertices_e_coil[3] = np.zeros((3,11)), np.zeros((3,11))
-# vertices_e_coil[1][0], vertices_e_coil[3][0] = np.linspace(-42.5, 42.5, 11, endpoint=True), np.linspace(42.5, -42.5, 11, endpoint=True)
-# vertices_e_coil[1][1], vertices_e_coil[3][1] = np.ones((11))*vertices_e_coil[0][1][-1], np.ones((11))*vertices_e_coil[2][1][-1]
-# vertices_e_coil[1][2], vertices_e_coil[3][2] = np.ones((11))*vertices_e_coil[0][2][-1], np.ones((11))*vertices_e_coil[2][2][-1]
+# Find field change and induced current.
+vals = np.zeros(shape=(10,20))
+with open("changing_field.txt", "r") as file:
+    lines = file.readlines()
+    num=-1
+    for line in lines:
+        splitted = line.split()
+        if splitted[0] == "part":
+            num = num+1
+            i = 0
+        else:
+            for val_str in splitted:
+                vals[num][i] = float(val_str)
+                i = i+1
+mean_vals=np.mean(vals, axis=1)
+diffs = [mean_vals[0]-mean_vals[-1]]
+k = 1
+for mean in mean_vals: # mean oppgitt i mT = milli Tesla
+    diffs.append(mean_vals[k]-mean) 
+    k=k+1
+    if k==len(mean_vals):break
+diffs = np.array(diffs) * 1E-3 * 0.0081 # ca areal av coil er 9*9 = 81 cm^2 = 0.81m^2
+print("diffs",diffs)
 
-# curr_lines_e = []
-# for line in vertices_e_coil:
-#     curr_lines_e.append( magpy.current.Line(-500, line.transpose()))
-# coil_e = magpy.Collection(curr_lines_e)
-# both_coils = magpy.Collection((coil_e, headcoil_coll))
+period = 1/(33.78E6) 
+time_part = period/10
+print("time", time_part)
+# Faraday's law calculating induced current2
+emfs = diffs/time_part # Direction calculated by Len's law, looping at the current direction of the small loop
+print("emfs", emfs)
+
+# In the MRI machine we have the coil in the x-y-plane (but really the x-z plane)
+slice = (5, -4)
+vertices_e_coil = np.zeros((4, 3, 11))
+# negarc, negpos, posarc, posneg 
+# = vertices_coil[0], vertices_coil[1], vertices_coil[2], vertices_coil[3]
+vertices_e_coil[0], vertices_e_coil[2] = np.zeros((3,11)), np.zeros((3,11)) # fra minus til pluss, fra pluss til minus
+vertices_e_coil[0][0], vertices_e_coil[0][1], vertices_e_coil[0][2] = np.ones((11))*-42.5, final_arc[0][slice[0]:slice[1]], final_arc[1][slice[0]:slice[1]]
+vertices_e_coil[2][0], vertices_e_coil[2][1], vertices_e_coil[2][2] = np.ones((11))*42.5, np.flip(final_arc[0][slice[0]:slice[1]]), np.flip(final_arc[1][slice[0]:slice[1]])
+vertices_e_coil[1], vertices_e_coil[3] = np.zeros((3,11)), np.zeros((3,11))
+vertices_e_coil[1][0], vertices_e_coil[3][0] = np.linspace(-42.5, 42.5, 11, endpoint=True), np.linspace(42.5, -42.5, 11, endpoint=True)
+vertices_e_coil[1][1], vertices_e_coil[3][1] = np.ones((11))*vertices_e_coil[0][1][-1], np.ones((11))*vertices_e_coil[2][1][-1]
+vertices_e_coil[1][2], vertices_e_coil[3][2] = np.ones((11))*vertices_e_coil[0][2][-1], np.ones((11))*vertices_e_coil[2][2][-1]
+
+curr_lines_e = []
+for line in vertices_e_coil:
+    curr_lines_e.append( magpy.current.Line(emfs[partnum], line.transpose()))
+coil_e = magpy.Collection(curr_lines_e)
+both_coils = magpy.Collection((coil_e, headcoil_coll))
 
 # Create figure
-figured_coil = headcoil_coll
+figured_coil = both_coils
 fig1 = plt.figure(figsize=[5, 5])
 #fig1.suptitle("Enhancing coil (s=9.0cm) inside head coil (16 rods)\nfield lines in slice z = 0mm")
 extent_xy, z = 150, 0
@@ -95,8 +128,8 @@ ax1.set_xlabel("z (mm)")
 ax1.set_ylabel("x (mm)")
 ax1.set_zlabel("y (mm)")
 ax1.get_legend().remove()
-plt.savefig("3d_birdcage.png", dpi=300, transparent=True)
-plt.close("all")
+# plt.savefig(f"3d_birdcage_w_enh.png", dpi=300)
+# plt.close("all")
 
 fig2 = plt.figure(figsize=[6, 5])
 ax2 = fig2.add_subplot(1,1,1)
@@ -112,18 +145,27 @@ tick_ls=np.linspace(-150, 150, 7)
 labels = [f"{lab:.0f}" for lab in tick_ls]
 ax2.set_xticks(ticks, labels)
 ax2.set_yticks(ticks, labels)
-plt.savefig("birdcage_fieldmagn.png", dpi=300,  transparent=True)
-plt.close("all")
+# plt.savefig(f"birdcage_fieldmagn_part{partnum}.png", dpi=300)
+# plt.close("all")
 
 fig3 = plt.figure(figsize=[6, 5])
 ax3 = fig3.add_subplot(1,1,1)
 X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
 grid = np.stack([np.zeros((100,100)) + z, X, Y], axis=2)
 B_field = magpy.getB(figured_coil, observers=grid)
+# with open("changing_field.txt", "a") as file:
+#     file.write(f"\npart {partnum}\n")
+#     file.write(np.array2string(B_field[40,40:60,2], precision=2).strip("[]"))
+
 #utils.show_field_lines_old(grid_slice=grid, B_field=B_field, ax=ax2, fig=fig2)
 utils.show_field_lines_old(grid_slice=grid, B_field=B_field, ax=ax3, fig=fig2)
-plt.savefig("birdcage_fieldlines.png", dpi=300,  transparent=True)
-plt.close("all")
+# plt.savefig(f"birdcage_fieldlines_part{partnum}.png", dpi=300)
+# plt.close("all")
 
-#plt.show()
 
+
+plt.show()
+
+# FORKLARER HVORFOR FORSTERKNINGEN ER KUN PÅ EN SIDE
+# Switcher polaritet og den deriverte skifter fortegn
+# Da er magnetfeltet fortsatt på samme side...
