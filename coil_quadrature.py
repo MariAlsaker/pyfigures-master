@@ -73,9 +73,9 @@ for ang in angles:
     B_field = magpy.getB(both_coils, observers=grid)
     ax = fig.add_subplot(start)
     start = start+1
-    utils.show_field_lines(grid, B_field, ax=ax, fig=fig)
+    utils.show_field_lines_old(grid, B_field, ax=ax, fig=fig)
     ax.set_title(f"Current = ({100*np.cos(ang):.0f}, {100*np.cos(ang+np.pi/2):.0f}) A")
-plt.savefig("rotating_field_quad.png")
+#plt.savefig("rotating_field_quad.png")
 
 # Define coil by MRI coil class
 #quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
@@ -108,5 +108,5 @@ plt.savefig("rotating_field_quad.png")
 # ax4.set_xlabel("x (mm)")
 # ax4.set_ylabel("y (mm)")
 #quad_loop.show_field_magnitude("B", vmax=50, gif_name="quad_Bmagn.mp4")
-#plt.show()
+plt.show()
     

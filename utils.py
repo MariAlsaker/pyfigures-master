@@ -1,7 +1,8 @@
 import numpy as np
-from matplotlib.colors import to_hex
+from matplotlib import colors
 from stl import mesh
 import matplotlib.pyplot as plt
+import magpylib
 
 # Save all your calculations here and use them in other files.
 # Example: plane_at, loop induction calc, conductance_calc, bin_to_hex, trace_from_stl, ...
@@ -42,7 +43,7 @@ def bin_color_to_hex(x):
     r = int(sb[:5], base=2) / 31
     g = int(sb[5:10], base=2) / 31
     b = int(sb[10:15], base=2) / 31
-    return to_hex((r, g, b))
+    return colors.to_hex((r, g, b))
 
 def trace_from_stl(stl_file, x_coords_current=None):
     """
@@ -114,6 +115,53 @@ def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True, slic
         ticks = np.array([1,10])
         cb.set_ticks(np.log10(ticks))
         cb.set_ticklabels(ticks)
+    ax.set(
+        xlabel=f"x-position (mm)",
+        ylabel=f"y-position (mm)")
+    plt.tight_layout()
+    return fig, ax
+
+def show_field_lines_old(grid_slice, B_field, ax=None, fig=None, colorbar=True):
+    if ax == None or fig == None:
+        fig, ax = plt.subplots()
+    log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
+    splt = ax.streamplot(
+        grid_slice[:, :, 1],
+        grid_slice[:, :, 2],
+        B_field[:, :, 1],
+        B_field[:, :, 2],
+        color=log10_norm_B,
+        density=1,
+        linewidth=log10_norm_B*2,
+        cmap="autumn",
+    )
+    if colorbar:
+        cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
+        # ticks = np.array([1,10])
+        # cb.set_ticks(np.log10(ticks))
+        # cb.set_ticklabels(ticks)
+    ax.set(
+        xlabel=f"x-position (mm)",
+        ylabel=f"y-position (mm)")
+    plt.tight_layout()
+    return fig, ax
+
+
+def show_field_magn(coil, grid_slice, ax=None, fig=None, colorbar=True, vmax=None):
+    if ax == None or fig == None:
+        fig, ax = plt.subplots()
+    B = magpylib.getB(sources=coil, observers=grid_slice)
+    print(B.shape)
+    B = np.linalg.norm(B, axis=2)
+    print(B.shape)
+    print(np.min(B), np.max(B))
+    # magn_B_norm = magn_B/np.max(magn_B)
+    if vmax==None:
+        magn_plt = ax.imshow(B, cmap="plasma", origin="lower", norm=colors.LogNorm()) #norm=colors.LogNorm()
+    else:
+        magn_plt = ax.imshow(B, cmap="plasma", origin="lower", vmin=0, vmax=vmax)
+    if colorbar:
+        fig.colorbar(magn_plt, ax=ax, label="|B| (mT)")
     ax.set(
         xlabel=f"x-position (mm)",
         ylabel=f"y-position (mm)")

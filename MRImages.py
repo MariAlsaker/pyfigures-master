@@ -1,3 +1,4 @@
+#%%
 import scipy.io
 from scipy.ndimage import convolve1d
 import matplotlib.pyplot as plt
@@ -162,7 +163,7 @@ for k, coil in enumerate(coils):
     cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
     cb = fig.colorbar(img, label="Normalized magnitude", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 
@@ -185,7 +186,7 @@ for coil in coils[-2:]: #[:-2]
         ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
     plt.tight_layout(pad=0)
     #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
-    #plt.show()
+    plt.show()
 plt.close("all")
 
 
@@ -242,7 +243,7 @@ for s, name in enumerate(names_b1_corr_files):
     plt.tight_layout( pad=0)
     #fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
     coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][0]]
-#plt.show()
+plt.show()
 plt.close("all")
 
 """ Coil SNR plot """
@@ -322,7 +323,7 @@ for i, lines in enumerate(coil_line_dicts):
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
         plt.legend()
         #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-#plt.show()
+plt.show()
 plt.close("all")
 
 
@@ -359,3 +360,4 @@ if save:
     for line_dict in coil_line_dicts:
         df_lines_197 = pd.DataFrame(line_dict).to_csv(f"coil_lines_{num}.csv")
         num=num+1
+# %%
