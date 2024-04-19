@@ -6,6 +6,8 @@ import magpylib
 
 # Save all your calculations here and use them in other files.
 # Example: plane_at, loop induction calc, conductance_calc, bin_to_hex, trace_from_stl, ...
+this_path = "/Users/marialsaker/git/pyfigures-master/"
+
 
 linestyle_tuple = [
      "solid",
@@ -79,7 +81,6 @@ def trace_from_stl(stl_file, x_coords_current=None):
             idx_x = np.where(np.round(x, 0)==x1)[0]
             if len(idx_x)>0:
                 ys_to_see = y[idx_x]
-                #print(ys_to_see)
                 idx_y = np.where(ys_to_see == 0.)[0]
                 if len(idx_y)>0:
                     for i in idx_x[idx_y]:
@@ -88,18 +89,18 @@ def trace_from_stl(stl_file, x_coords_current=None):
     return trace
 
 def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True, slicein="z"):
+    # slicein referring to original x, y, z coordinates
     if ax == None or fig == None:
         fig, ax = plt.subplots()
     if slicein=="z":
         i1, i2 = 0,1
-    elif slicein=="y":
-        i1, i2 = 1,2
     elif slicein=="x":
+        i1, i2 = 1,2
+    elif slicein=="y":
         i1, i2 = 0,2
     else:
         Exception(f"{slicein} is not a leagal slize dimension")
     log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
-    print(grid_slice[:, :, i2].shape)
     splt = ax.streamplot(
         grid_slice[:, :, i1],
         grid_slice[:, :, i2],
@@ -121,40 +122,12 @@ def show_field_lines(grid_slice, B_field, ax=None, fig=None, colorbar=True, slic
     plt.tight_layout()
     return fig, ax
 
-def show_field_lines_old(grid_slice, B_field, ax=None, fig=None, colorbar=True):
-    if ax == None or fig == None:
-        fig, ax = plt.subplots()
-    log10_norm_B = np.log10(np.linalg.norm(B_field, axis=2))
-    splt = ax.streamplot(
-        grid_slice[:, :, 1],
-        grid_slice[:, :, 2],
-        B_field[:, :, 1],
-        B_field[:, :, 2],
-        color=log10_norm_B,
-        density=1,
-        linewidth=log10_norm_B*2,
-        cmap="autumn",
-    )
-    if colorbar:
-        cb = fig.colorbar(splt.lines, ax=ax, label="|B| (mT)")
-        # ticks = np.array([1,10])
-        # cb.set_ticks(np.log10(ticks))
-        # cb.set_ticklabels(ticks)
-    ax.set(
-        xlabel=f"x-position (mm)",
-        ylabel=f"y-position (mm)")
-    plt.tight_layout()
-    return fig, ax
-
 
 def show_field_magn(coil, grid_slice, ax=None, fig=None, colorbar=True, vmax=None):
     if ax == None or fig == None:
         fig, ax = plt.subplots()
     B = magpylib.getB(sources=coil, observers=grid_slice)
-    print(B.shape)
     B = np.linalg.norm(B, axis=2)
-    print(B.shape)
-    print(np.min(B), np.max(B))
     # magn_B_norm = magn_B/np.max(magn_B)
     if vmax==None:
         magn_plt = ax.imshow(B, cmap="plasma", origin="lower", norm=colors.LogNorm()) #norm=colors.LogNorm()
@@ -167,3 +140,21 @@ def show_field_magn(coil, grid_slice, ax=None, fig=None, colorbar=True, vmax=Non
         ylabel=f"y-position (mm)")
     plt.tight_layout()
     return fig, ax
+
+def create_2D_arc(radius):
+    center = (0,0)
+    x = np.linspace(center[0], center[0]+radius, 101, endpoint=True)
+    arc = np.array([np.sqrt(radius**2 - (x-center[0])**2)+center[1], x])
+    rot_angle = np.radians(90+45)
+    cos, sin = np.cos(rot_angle), np.sin(rot_angle)
+    rot_matrix = np.array([[cos, sin], [-np.sin(rot_angle), np.cos(rot_angle)]])
+    new_arc = np.dot(rot_matrix, arc)
+    num_points = 20
+    x_points = np.linspace(new_arc[0][0], new_arc[0][-1], num_points, endpoint=True)
+    final_arc = np.zeros((2, num_points))
+    for i, x in enumerate(x_points):
+        index = np.where(new_arc[0]>=x)[0][0]
+        keep_x, keep_y = new_arc[0][index], new_arc[1][index]
+        final_arc[0][i] = keep_x
+        final_arc[1][i] = keep_y
+    return final_arc
