@@ -26,7 +26,7 @@ for i, x in enumerate(x_points):
     final_arc[0][i] = keep_x
     final_arc[1][i] = keep_y
 #print(final_arc) # x, y = 0, 1
-
+print(final_arc)
 # In the MRI machine we have the coil in the x-y-plane (but really the x-z plane)
 slice_start_end = [(0, 11), (8, -1)]
 vertices_2coils = np.zeros((2, 4, 3, 11))
@@ -48,12 +48,14 @@ currents = [100*np.cos(np.pi/4), 100*np.cos(np.pi/4 + np.pi/2)]
 for i, vertices in enumerate(vertices_2coils):
     for j, line in enumerate(vertices):
         this_line =  magpy.current.Line(currents[i], line.transpose())
-        this_line.current
         curr_lines_2coils[i].append(this_line)
 coil1 = magpy.Collection(curr_lines_2coils[0])
 coil2 = magpy.Collection(curr_lines_2coils[1])
 # Aiming for 8 different fields
 angles = np.linspace(0, 2*np.pi, 8, endpoint=False)
+
+# both_coils = magpy.Collection([coil1, coil2])
+# both_coils.show()
 
 extent_xy = 25
 z = 0
@@ -66,16 +68,16 @@ for ang in angles:
     for i, coil in enumerate([coil1, coil2]):
         for current_line in coil.sources_all:
             if i == 0:
-                current_line.current = 100*np.cos(ang)
-            else:
                 current_line.current = 100*np.cos(ang+np.pi/2)
+            else:
+                current_line.current = 100*np.cos(ang)
     both_coils = magpy.Collection((coil1, coil2), override_parent=True)
     B_field = magpy.getB(both_coils, observers=grid)
     ax = fig.add_subplot(start)
     start = start+1
-    utils.show_field_lines_old(grid, B_field, ax=ax, fig=fig)
-    ax.set_title(f"Current = ({100*np.cos(ang):.0f}, {100*np.cos(ang+np.pi/2):.0f}) A")
-#plt.savefig("rotating_field_quad.png")
+    utils.show_field_lines(grid, B_field, ax=ax, fig=fig, slicein='x')
+    ax.set_title(f"Current = ({100*np.cos(ang+np.pi/2):.0f}, {100*np.cos(ang):.0f}) A")
+plt.savefig("rotating_field_quad_dir_correct.png")
 
 # Define coil by MRI coil class
 #quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
