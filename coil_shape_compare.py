@@ -64,7 +64,7 @@ extent_xy = 50
 X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
 grid = np.stack([np.zeros((100,100)), X, Y], axis=2)
 B_field = magpy.getB(coil, observers=grid)
-utils.show_field_lines_old(grid, B_field, ax=ax2, fig=fig)
+utils.show_field_lines(grid, B_field, ax=ax2, fig=fig, slicein="x")
 
 """ SQUARE SINGLE LOOP COIL """
 d_mm = d*1000
@@ -77,6 +77,6 @@ ax1.get_legend().remove()
 # surface_coil.show_field_magnitude("B", vmax=100)
 
 B_field = magpy.getB(coil1, observers=grid)
-utils.show_field_lines_old(grid, B_field, ax=ax3, fig=fig)
+utils.show_field_lines(grid, B_field, ax=ax3, fig=fig, slicein="x")
 #plt.tight_layout()
 plt.show()
