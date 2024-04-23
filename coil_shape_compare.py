@@ -11,9 +11,9 @@ import utils
 
 cmap = mpl.colormaps.get_cmap("plasma")
 
-pdepth=0.05 #m
+d = 0.15#2*pdepth
+pdepth= d/2#0.05 #m
 s = np.sqrt(np.pi)*pdepth
-d = 2*pdepth
 
 t = np.linspace(0, 2*np.pi, 100)
 x = d/2*np.cos(t)
@@ -25,8 +25,9 @@ ax.hlines([-s/2, s/2], xmin=[-s/2, -s/2], xmax=[s/2, s/2], colors=cmap(0.5), lin
 ax.vlines([-s/2, s/2], ymin=[-s/2, -s/2], ymax=[s/2, s/2], colors=cmap(0.5), linewidth=7.0)
 ax.scatter([-s/2, -s/2, s/2, s/2], [s/2, -s/2, s/2, -s/2], color=[cmap(0.5) for i in range(4)], s=25.0)
 ax.axis("off")
+#plt.savefig("circle_square_same_area.png", dpi=300)
 plt.close("all")
-# #plt.show()
+#plt.show()
 
 """ SQUARE SINGLE LOOP COIL """
 s_cm = s*1000
@@ -41,34 +42,37 @@ for i, line in enumerate(vertices_coil):
         line[i%2] = np.flip(line[i%2])
 curr_lines = []
 for line in vertices_coil:
-    curr_lines.append( magpy.current.Line(100, line.transpose()))
+    curr_lines.append( magpy.current.Line(400, line.transpose()))
 coil = magpy.Collection(curr_lines)
 # Create figure
 fig = plt.figure()
-fig.set_figheight(8)
-fig.set_figwidth(10)
-spec = mpl.gridspec.GridSpec(ncols=2, nrows=2, wspace=0.5,
-                         hspace=0.5, height_ratios=[1, 2])
+fig.set_figheight(10)
+fig.set_figwidth(9)
+spec = mpl.gridspec.GridSpec(ncols=2, nrows=3, wspace=0.5,
+                         hspace=0.5, height_ratios=[2, 3, 3])
 ax0 = fig.add_subplot(spec[0], projection="3d")
 ax1 = fig.add_subplot(spec[1], projection="3d")
 ax2 = fig.add_subplot(spec[2])
 ax3 = fig.add_subplot(spec[3])
-fig.suptitle("Coils of same area")
+ax4 = fig.add_subplot(spec[4])
+ax5 = fig.add_subplot(spec[5])
+#fig.suptitle("Coils of same area")
 magpy.show(coil, backend='matplotlib',return_fig=False, canvas=ax0)
 ax0.set_xlabel("x (mm)")
 ax0.set_ylabel("z (mm)")
 ax0.set_zlabel("y (mm)")
 ax0.get_legend().remove()
 
-extent_xy = 50
+extent_xy = 80
 X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
 grid = np.stack([np.zeros((100,100)), X, Y], axis=2)
 B_field = magpy.getB(coil, observers=grid)
 utils.show_field_lines(grid, B_field, ax=ax2, fig=fig, slicein="x")
+utils.show_field_magn(coil, grid, ax=ax4, fig=fig, vmax=8)
 
 """ SQUARE SINGLE LOOP COIL """
 d_mm = d*1000
-coil1 = magpy.current.Loop(current=100, diameter=d_mm)
+coil1 = magpy.current.Loop(current=400, diameter=d_mm)
 magpy.show(coil1, backend='matplotlib',return_fig=False, canvas=ax1)
 ax1.set_xlabel("x (mm)")
 ax1.set_ylabel("z (mm)")
@@ -78,5 +82,7 @@ ax1.get_legend().remove()
 
 B_field = magpy.getB(coil1, observers=grid)
 utils.show_field_lines(grid, B_field, ax=ax3, fig=fig, slicein="x")
-#plt.tight_layout()
-plt.show()
+utils.show_field_magn(coil1, grid, ax=ax5, fig=fig, vmax=8)
+plt.tight_layout(pad=0)
+# plt.savefig("comparing_coil_shapes.png", dpi=300)
+# plt.show()
