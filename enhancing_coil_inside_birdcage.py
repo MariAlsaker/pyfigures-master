@@ -122,18 +122,18 @@ ax2 = fig2.add_subplot(1,1,1)
 X, Y = np.mgrid[-extent_xy:extent_xy:100j, -extent_xy:extent_xy:100j].transpose((0,2,1))
 grid = np.stack([np.zeros((100,100)) + z, X, Y], axis=2)
 B_field = magpy.getB(figured_coil, observers=grid)
-utils.show_field_magn(grid_slice=grid, coil=figured_coil, ax=ax2, fig=fig2, vmax=100, colorbar=False)
+utils.show_field_magn(grid_slice=grid, coil=figured_coil, ax=ax2, fig=fig2, vmax=100, colorbar=True)
 ax2.set_xlabel("x (mm)")
 ax2.set_ylabel("y (mm)")
-ticks=np.linspace(0, 100, 7)
+ax2.hlines(30, xmin=40, xmax=60) # For showing the line where flux is calculated
+ticks=np.linspace(0, 99, 7)
 tick_ls=np.linspace(-extent_xy, extent_xy, 7)
 labels = [f"{lab:.0f}" for lab in tick_ls]
 ax2.set_xticks(ticks, labels)
 ax2.set_yticks(ticks, labels)
-ax2.axis("off")
-plt.tight_layout( pad=0)
+# ax2.axis("off")
+# plt.tight_layout( pad=0)
 
-# ax2.hlines(30, xmin=40, xmax=60) # For showing the line where flux is calculated
 # plt.savefig(f"birdcage_field_part{partnum}", dpi=300)
 # plt.close("all")
 
@@ -146,9 +146,9 @@ B_field = magpy.getB(figured_coil, observers=grid)
 #     file.write(f"\npart {partnum}\n")
 #     file.write(np.array2string(B_field[30,40:60,2], precision=2).strip("[]"))
 
-utils.show_field_lines(grid_slice=grid, B_field=B_field, ax=ax3, fig=fig2, slicein="x", colorbar=False)
-ax3.axis("off")
-plt.tight_layout( pad=0)
+utils.show_field_lines(grid_slice=grid, B_field=B_field, ax=ax3, fig=fig2, slicein="x", colorbar=True)
+# ax3.axis("off")
+# plt.tight_layout( pad=0)
 
 # plt.savefig(f"birdcage_fieldlines_part{partnum}.png", dpi=300)
 # plt.close("all")
