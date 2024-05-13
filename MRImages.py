@@ -99,7 +99,7 @@ def norm_magn_image(image):
 
 numpy_files_path = "/Users/marialsaker/git/pyfigures-master/MRI_data/"
 coils = ["OrigSurface", "AssadiSurface", "SingleLoop", "QuadratureCoil", "Birdcage2nd", "BirdcageEnh"] 
-real_names = ["Preexisting coil 1", "Preexisting coil 2", "Single loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with\nenhancing coil", "Quadrature coil, corrected", "Birdcage with enhancing coil, corrected"]
+real_names = ["Prior Design One", "Prior Design Two", "Single-Loop coil", "Quadrature coil", "Birdcage coil", "Birdcage with\nenhancing coil", "Quadrature coil, corrected", "Birdcage with \nenhancing coil, corrected"]
 readouts = ["197", "1402", "2552"]
     #"ksamp" : ["10", "12", "25"],
     #"res" : ["4.5", "3", "3"]
@@ -119,7 +119,10 @@ snrs = []
 calculated_snrs = []
 empty80 = np.zeros(shape=(len(coils), 80))
 empty120 = np.zeros(shape=(len(coils), 120))
-coil_line_dicts = [ dict(zip(coils, [empty120 for i in range(len(coils))])),
+coil_line_dicts_v = [ dict(zip(coils, [empty120 for i in range(len(coils))])),
+                    dict(zip(coils, [empty80 for i in range(len(coils))])),
+                    dict(zip(coils, [empty80 for i in range(len(coils))])) ]
+coil_line_dicts_h = [ dict(zip(coils, [empty120 for i in range(len(coils))])),
                     dict(zip(coils, [empty80 for i in range(len(coils))])),
                     dict(zip(coils, [empty80 for i in range(len(coils))])) ]
 f0s = []
@@ -136,7 +139,7 @@ for k, coil in enumerate(coils):
                 f0s.append(f0)
     fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
     axs = axs.flatten()
-    axs[3].text(0.1, 0.6, f"{real_names[k]}", clip_on=False, fontweight="bold", fontsize="x-large")
+    # axs[3].text(0.1, 0.6, f"{real_names[k]}", clip_on=False, fontweight="bold", fontsize="x-large")
     axs[3].axis("off")
     snrs_this_coil = []
     for i, ros in enumerate(readouts):
@@ -156,14 +159,15 @@ for k, coil in enumerate(coils):
         axs[i].axis("off")
         axs[i].text(5, 5, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
         snr_calc = calculate_SNR(signal_squares, noise_squares)
-        plt.tight_layout( pad=0)
+        plt.tight_layout(pad=0)
         snrs_this_coil.append(snr_calc)
-        coil_line_dicts[i][coil] = this_img[:,centers_spec[k][i][0]]
+        coil_line_dicts_v[i][coil] = this_img[:,centers_spec[k][i][0]]
+        coil_line_dicts_h[i][coil] = this_img[centers_spec[k][i][1],:]
     calculated_snrs.append(snrs_this_coil)
-    cbar_ax = fig.add_axes([0.55, 0.2, 0.4, 0.03])
+    cbar_ax = fig.add_axes([0.55, 0.25, 0.4, 0.03])
     cb = fig.colorbar(img, label="Normalized magnitude", cax=cbar_ax, location="bottom")
     #fig.savefig(f"{coil}_three_readouts.png", dpi=300 ,transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
@@ -186,7 +190,7 @@ for coil in coils[-2:]: #[:-2]
         ax.text(5, 8, f"{i+1}", color="k", fontweight="bold", backgroundcolor="w")
     plt.tight_layout(pad=0)
     #fig.savefig(f"{coil}_{r}_blurr_corr.png", dpi=300 ,transparent=True)
-    plt.show()
+    #plt.show()
 plt.close("all")
 
 
@@ -241,16 +245,17 @@ for s, name in enumerate(names_b1_corr_files):
         cbar1_ax = fig.add_axes([0.55, img_to_cb[1], 0.4, 0.03])
         cb1 = fig.colorbar(img_to_cb[0], label=img_to_cb[2], cax=cbar1_ax, location="bottom")
     plt.tight_layout( pad=0)
-    #fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
-    coil_line_dicts[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][0]]
-plt.show()
+    # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
+    coil_line_dicts_v[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][0]]
+    coil_line_dicts_h[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][1]]
+#plt.show()
 plt.close("all")
 
 """ Coil SNR plot """
 cmap = mpl.colormaps.get_cmap("plasma")
 fig, axs = plt.subplots(1, 1, figsize = (7, 6))
 axs.set_ylim([0, 90])
-scans = ["3D cones 1", "3D cones 2", "3D cones 3"]
+scans = ["CN-197", "CN-1442", "CN-2552"]
 coil_snrs = {
     scans[0]:[],
     scans[1]:[],
@@ -271,13 +276,13 @@ for attribute, snrs_coil in coil_snrs.items():
     #axs.bar(positions+offset, snrs_coil, width, color='none', )
     axs.bar_label(rects, padding=3, rotation="vertical", fmt="%.0f")
     multiplier += 1
-axs.set_title("SNR calculated from MR images")
+#axs.set_title("SNR calculated from MR images")
 axs.set_ylabel("SNR")
 axs.set_xticks(positions+width, real_names[:-2], rotation=25)
 axs.legend(loc="upper left")
 fig.subplots_adjust(bottom=0.15)
-plt.show()
-fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
+#plt.show()
+#fig.savefig(f"SNRs_all_coils", dpi=300 ,transparent=True)
 plt.close("all")
 
 
@@ -294,16 +299,17 @@ center = [20+radius, 23+radius]
 len_1d = len(normalized_phantom[current_index])
 circ_mask = create_circular_mask(h=len_1d, w=len_1d, center=center, radius=radius)
 phantom_img_theory = np.ones_like(normalized_phantom[current_index])*circ_mask*-1
-""" Actual line plots """
+
+""" Actual line plots vertical """
 x_80 = np.linspace(0, 24, 80)
 diff_80 = x_80[1]-x_80[0]
 x_120 = np.linspace(0, 24, 120)
 diff_120 = x_120[1]-x_120[0]
-for i, lines in enumerate(coil_line_dicts):
+for i, lines in enumerate(coil_line_dicts_v):
     fig, ax = plt.subplots(1, 1, figsize=(9,7))
     if i==0: diff, extra = diff_120, 1.5/diff_120
     else: diff, extra = diff_80, 1.5/diff_80
-    ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
+    # ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
     ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
     cvals = np.linspace(0, 0.8, len(lines.keys()))
     for j, line in enumerate(lines.values()):
@@ -313,16 +319,47 @@ for i, lines in enumerate(coil_line_dicts):
         start = int(index_t-extra)
         xs = [f*diff for f in range(len(line[start:]))]
         ax.plot(xs, line[start:], color=cmap(cvals[j]), label=real_names[j], linestyle=linestyle_tuple[j])
-        ax.set_xlabel("cm") # Transform from pixel to centimeter
-        ax.set_ylabel("Normalized magnitude")
         phantom_d = 11.5 #cm
         offset_from_coil = 1.2
-        ax.set(xlim=(0, 22), ylim=(0, 1))
-        im = ax.imshow(phantom_img_theory, extent=[17,20,0.5,0.65], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
-        ax.plot([17+(20-17)/2, 17+(20-17)/2], [0.5, 0.65], "k-")
         ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
-        plt.legend()
-        #plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
+    ax.set_xlabel("cm") # Transform from pixel to centimeter
+    ax.set_ylabel("Normalized magnitude")
+    ax.set(xlim=(0, 22), ylim=(0, 1))
+    im = ax.imshow(phantom_img_theory, extent=[17,20,0.35,0.5], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
+    ax.plot([17+(20-17)/2, 17+(20-17)/2], [0.35, 0.5], "k-")
+    plt.legend()
+    plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
+plt.show()
+plt.close("all")
+
+
+""" Actual line plots horizontal """
+x_80 = np.linspace(0, 24, 80)
+diff_80 = x_80[1]-x_80[0]
+x_120 = np.linspace(0, 24, 120)
+diff_120 = x_120[1]-x_120[0]
+for i, lines in enumerate(coil_line_dicts_h):
+    fig, ax = plt.subplots(1, 1, figsize=(9,7))
+    if i==0: diff, extra = diff_120, 1.5/diff_120
+    else: diff, extra = diff_80, 1.5/diff_80
+    # ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
+    ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
+    cvals = np.linspace(0, 0.8, len(lines.keys()))
+    for j, line in enumerate(lines.values()):
+        line = np.flip(line)
+        index_t = next(x[0] for x in enumerate(line) if x[1]>0.4)
+        x_0 = 0
+        start = 0 #int(index_t-extra)
+        xs = [f*diff for f in range(len(line[start:]))]
+        ax.plot(xs, line[start:], color=cmap(cvals[j]), label=real_names[j], linestyle=linestyle_tuple[j])
+    ax.set_xlabel("cm") # Transform from pixel to centimeter
+    ax.set_ylabel("Normalized magnitude")
+    ax.set(xlim=(0, 24), ylim=(0, 1))
+    im = ax.imshow(phantom_img_theory, extent=[19,22,0.35,0.5], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
+    ax.plot([19, 22], [0.4, 0.4], "k-")
+    ax.hlines([0.7], xmin=[0], xmax=[24], colors=["k"], linestyles=["--"], label="Homogeneity \nthreshold")
+    plt.legend()
+    plt.savefig( f"3Dcones{i+1}_line_plots_h.png", dpi=300, transparent=True)
 plt.show()
 plt.close("all")
 
@@ -357,7 +394,12 @@ plt.close("all")
 save = False
 if save:
     num = 1
-    for line_dict in coil_line_dicts:
+    for line_dict in coil_line_dicts_v:
         df_lines_197 = pd.DataFrame(line_dict).to_csv(f"coil_lines_{num}.csv")
+        num=num+1
+
+    num = 1
+    for line_dict in coil_line_dicts_h:
+        df_lines_197 = pd.DataFrame(line_dict).to_csv(f"coil_h_lines_{num}.csv")
         num=num+1
 # %%

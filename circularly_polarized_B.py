@@ -18,12 +18,13 @@ colors = [cmap(num) for num in c_num]
 ypos = 1.76
 for i, val in enumerate(t):
     qv = ax.quiver(0, 0, x[i], +y85[i], color = "lightgrey", scale_units="xy", angles="xy", scale=1)
-    qv2 = ax.quiver(0, 0, x[i]*np.cos(0)-y85[i]*np.cos(np.pi/2*0.94444), +y85[i]*np.sin(np.pi/2*0.94444), color = "grey", scale_units="xy", angles="xy", scale=1)
+    #qv2 = ax.quiver(0, 0, x[i]*np.cos(0)-y85[i]*np.cos(np.pi/2*0.94444), +y85[i]*np.sin(np.pi/2*0.94444), color = "grey", scale_units="xy", angles="xy", scale=1)
     qv = ax.quiver(0, 0, x[i], +y[i], color = colors[i], scale_units="xy", angles="xy", scale=1)
     ax.quiverkey(qv, 1.6, ypos, 0.4, f"B-field t = {val*1E9:.1f}ns,\n (x,y)=({x[i]:.1f},{y[i]:.1f})", coordinates="data")
     ypos = ypos-0.4
-ax.set_title("Circularly polarized field")
+#ax.set_title("Circularly polarized field")
 ax.set_xlabel("x-direction")
 ax.set_ylabel("y-direction")
 plt.legend()
+#plt.savefig(f"Quad_field_explained.png", dpi=300 ,transparent=True)
 plt.show()

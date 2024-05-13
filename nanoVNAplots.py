@@ -199,10 +199,10 @@ for coil in coils:
     plot_smith(ax=ax2, reals=reals2, ims=ims2, c=c_noload, magn_db=magn2_db, style=linestyle_tuple[1], fillstyle="left")
         
     ax1.legend()
-    fig.suptitle(f"Laboratory tests of the {name} coil")
-    ax1.set_title("|S11| magnitude")
-    ax2.set_title("Real and imaginary impedance (Smith chart)")
-    #plt.savefig(f's11 {name}.png', transparent=True)
+    #fig.suptitle(f"Laboratory tests of the {name} coil")
+    #ax1.set_title("|S11| magnitude")
+    #ax2.set_title("Real and imaginary impedance (Smith chart)")
+    plt.savefig(f's11 {name}.png', transparent=True)
 
     print(f"Magnitude, freq loaded = ({mean_data1[3][min_index1]}+-{std_data1[3][min_index1]}), ({mean_data1[0][min_index1]}+-{std_data1[0][min_index1]})")
     print(f"Magnitude, freq unloaded = ({mean_data2[3][min_index2]}+-{std_data2[3][min_index2]}), ({mean_data2[0][min_index2]}+-{std_data2[0][min_index1]})")
@@ -215,15 +215,15 @@ for coil in coils:
     if print_Qs_single:
         print(f"Unloaded Q = {Q_noload:.4f} and loaded Q = {Q_load:.4f}\n> Q ratio = {Q_ratio:.4f}")
 
-#plt.show()
+plt.show()
 plt.close("all")
 
 
 
 """ QUADRATURE COIL PLOTS AND MEASUREMENTS """
 # Demonstrate that the quadrature coil is a reciprocal network, meaning that the S_21 = S_12
-show_quad_plots = False
-save = False
+show_quad_plots = True
+save = True
 print_impedance = True
 print_Qs_quad = True
 
@@ -256,7 +256,7 @@ for i, values in enumerate([values_loaded_quad, values_unloaded_quad]):
     min_i_first = plot_res(ax, magn_db=values[1][0], freqs=freqs_q, color=colors[i][0], fillstyle=fill)
     min_i_switch = plot_res(ax, magn_db=values[1][3], freqs=freqs_q, color=colors[i][3], fillstyle=fill)
     print(f"Minimums indexes = {min_i_first}, {min_i_switch}")
-    ax.set_title(f"S parameter magnitudes,\nquadrature coil was loaded with {loadTF[i]}")
+    #ax.set_title(f"S parameter magnitudes,\nquadrature coil was loaded with {loadTF[i]}")
     ax.legend()
     if save:    
         figs[i].savefig(f"quad_magn_{i}.png", transparent=True)
