@@ -247,7 +247,7 @@ for s, name in enumerate(names_b1_corr_files):
     plt.tight_layout( pad=0)
     # fig.savefig(f"{name}_b1_DA_corr.png", dpi=300 ,transparent=True)
     coil_line_dicts_v[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][0]]
-    coil_line_dicts_h[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[:,centers_spec[indices[s]][0][1]]
+    coil_line_dicts_h[0][f"{coils[indices[s]]}_b1corr"] = corrected_img_mul[centers_spec[indices[s]][0][1],:]
 #plt.show()
 plt.close("all")
 
@@ -310,26 +310,26 @@ for i, lines in enumerate(coil_line_dicts_v):
     if i==0: diff, extra = diff_120, 1.5/diff_120
     else: diff, extra = diff_80, 1.5/diff_80
     # ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
-    ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
+    #ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
     cvals = np.linspace(0, 0.8, len(lines.keys()))
     for j, line in enumerate(lines.values()):
         line = np.flip(line)
         index_t = next(x[0] for x in enumerate(line) if x[1]>0.4)
-        x_0 = 0
         start = int(index_t-extra)
-        xs = [f*diff for f in range(len(line[start:]))]
+        xs = np.array([f*diff for f in range(len(line[start:]))])-1.5
         ax.plot(xs, line[start:], color=cmap(cvals[j]), label=real_names[j], linestyle=linestyle_tuple[j])
         phantom_d = 11.5 #cm
         offset_from_coil = 1.2
-        ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
-    ax.set_xlabel("cm") # Transform from pixel to centimeter
+        #ax.axvspan(offset_from_coil, offset_from_coil+phantom_d, facecolor="lightgray", alpha=0.1)
+    ax.set_xlabel("Posterior/Anterior [cm]") # Transform from pixel to centimeter
     ax.set_ylabel("Normalized magnitude")
-    ax.set(xlim=(0, 22), ylim=(0, 1))
+    ax.set(xlim=(-1.5, 22), ylim=(0, 1))
     im = ax.imshow(phantom_img_theory, extent=[17,20,0.35,0.5], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
     ax.plot([17+(20-17)/2, 17+(20-17)/2], [0.35, 0.5], "k-")
+    ax.hlines([0.5], xmin=[-1.5], xmax=[24], colors=["k"], linestyles=["--"], label="Homogeneity \nthreshold")
     plt.legend()
     plt.savefig( f"3Dcones{i+1}_line_plots.png", dpi=300, transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
@@ -340,27 +340,30 @@ x_120 = np.linspace(0, 24, 120)
 diff_120 = x_120[1]-x_120[0]
 for i, lines in enumerate(coil_line_dicts_h):
     fig, ax = plt.subplots(1, 1, figsize=(9,7))
-    if i==0: diff, extra = diff_120, 1.5/diff_120
-    else: diff, extra = diff_80, 1.5/diff_80
+    if i==0: diff, extra = diff_120, 8/diff_120
+    else: diff, extra = diff_80, 8/diff_80
     # ax.set_title(f"Intensity comparison for scan '3D cones {i+1}'")
     ax.vlines(0, ymin=0, ymax=1, color="k", linestyles="--")
     cvals = np.linspace(0, 0.8, len(lines.keys()))
     for j, line in enumerate(lines.values()):
         line = np.flip(line)
         index_t = next(x[0] for x in enumerate(line) if x[1]>0.4)
-        x_0 = 0
-        start = 0 #int(index_t-extra)
-        xs = [f*diff for f in range(len(line[start:]))]
+        start = int(index_t-extra)
+        if index_t-extra<0:
+            num_nulls = extra-index_t
+            line = np.concatenate((np.zeros(shape=int(num_nulls)), np.array(line)))
+            start = 0
+        xs = np.array([f*diff for f in range(len(line[start:]))])
         ax.plot(xs, line[start:], color=cmap(cvals[j]), label=real_names[j], linestyle=linestyle_tuple[j])
-    ax.set_xlabel("cm") # Transform from pixel to centimeter
+    ax.set_xlabel("Right/Left [cm]") # Transform from pixel to centimeter
     ax.set_ylabel("Normalized magnitude")
     ax.set(xlim=(0, 24), ylim=(0, 1))
     im = ax.imshow(phantom_img_theory, extent=[19,22,0.35,0.5], aspect="auto", cmap="Greys", vmin=-2, vmax=1) # (xmin, xmax, ymin, ymax)
     ax.plot([19, 22], [0.4, 0.4], "k-")
-    ax.hlines([0.7], xmin=[0], xmax=[24], colors=["k"], linestyles=["--"], label="Homogeneity \nthreshold")
+    ax.hlines([0.5], xmin=[0], xmax=[24], colors=["k"], linestyles=["--"], label="Homogeneity \nthreshold")
     plt.legend()
     plt.savefig( f"3Dcones{i+1}_line_plots_h.png", dpi=300, transparent=True)
-plt.show()
+#plt.show()
 plt.close("all")
 
 
