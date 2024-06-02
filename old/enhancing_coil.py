@@ -1,10 +1,14 @@
-import my_classes.MRIcoil as MRIcoil
 from matplotlib import pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 from stl import mesh
 import magpylib as magpy
 from scipy.optimize import curve_fit
+
+import sys
+sys.path.insert(0, '/Users/marialsaker/git/pyfigures-master/my_classes') # change for your user/name
+import MRIcoil
+sys.path.insert(0, '/Users/marialsaker/git/pyfigures-master') # change for your user/name
 import utils
 
 

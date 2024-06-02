@@ -1,10 +1,13 @@
-import my_classes.MRIcoil as MRIcoil
 from matplotlib import pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
 from stl import mesh
 import magpylib as magpy
 from scipy.optimize import curve_fit
+
+import sys
+sys.path.insert(0, '/Users/marialsaker/git/pyfigures-master/my_classes')
+import MRIcoil
 
 def plane_at(slice="x=00", extent=50):
     xx = np.linspace(-extent, extent, 101)
@@ -151,4 +154,5 @@ ax2.plot_surface(X, Y, Z, alpha=.3, label="x = 0, slice 50")
 ax1.get_legend().set_visible(False)
 ax2.get_legend().set_visible(False)
 plt.tight_layout()
-plt.savefig('Figures/MMIV_poster_field.png', transparent=True)
+plt.show()
+#plt.savefig('Figures/MMIV_poster_field.png', transparent=True)
