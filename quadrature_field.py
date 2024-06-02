@@ -1,5 +1,4 @@
 
-import my_classes.MRIcoil as MRIcoil
 from matplotlib import pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex

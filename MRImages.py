@@ -1,5 +1,4 @@
 #%%
-import scipy.io
 from scipy.ndimage import convolve1d
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation

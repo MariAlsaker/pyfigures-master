@@ -37,8 +37,9 @@ z_headcoil = r_headcoil* np.sin(t) #+ 100
 curr_lines_headcoil = []
 xs = np.linspace(0, 2*np.pi, 16)
 part = np.pi*2/10
+# ********** Changing partnum makes the field lines rotate **********
 partnum = 0 # max 9
-currs = 400*(2*8)*np.cos(xs+np.pi/16+partnum*part) # Changing number of part makes the field lines rotate
+currs = 400*(2*8)*np.cos(xs+np.pi/16+partnum*part) 
 currs = np.flip(currs)
 for pos in range(len(y_headcoil)):
     vertices = np.zeros((3,2))

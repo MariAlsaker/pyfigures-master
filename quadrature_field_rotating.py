@@ -1,4 +1,3 @@
-import my_classes.MRIcoil as MRIcoil
 from matplotlib import pyplot as plt
 import numpy as np
 from matplotlib.colors import to_hex
@@ -77,38 +76,7 @@ for ang in angles:
     start = start+1
     utils.show_field_lines(grid, B_field, ax=ax, fig=fig, slicein='x')
     ax.set_title(f"Current = ({100*np.cos(ang+np.pi/2):.0f}, {100*np.cos(ang):.0f}) A")
-plt.savefig("rotating_field_quad_dir_correct.png")
+# plt.savefig("rotating_field_quad_dir_correct.png")
 
-# Define coil by MRI coil class
-#quad_loop = MRIcoil.MRIcoil(current=90, diameter=100, custom_coil=True, custom_coil_current_line=both_coils)
-
-# Create figure
-# fig2 = plt.figure(figsize=[12, 8])
-# fig2.suptitle("Quadrature coil (s=8.5cm) with field lines in slice z = 0, y = 40 and x = 0")
-# ax1 = fig2.add_subplot(2,2,1, projection="3d")
-# ax2 = fig2.add_subplot(2,2,2)
-# ax3 = fig2.add_subplot(2,2,3)
-# ax4 = fig2.add_subplot(2,2,4)
-# quad_loop.show_coil(ax=ax1)
-# quad_loop.show_field_lines(slice="z90", ax=ax2, fig=fig2)
-# quad_loop.show_field_lines(slice="x50", ax=ax3, fig=fig2)
-# ax3.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
-# quad_loop.show_field_lines(slice="y50", ax=ax4, fig=fig2)
-# ax4.hlines(y=[40], xmin=[-50], xmax=[50], colors=['k'], linestyles='dashed')
-# X, Y, Z = utils.plane_at("z=40")
-# ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 40")
-# # X, Y, Z = utils.plane_at("z=00")
-# # ax1.plot_surface(X, Y, Z, alpha=.3, label="y = 0")
-
-# ax1.set_xlabel("z (mm)")
-# ax1.set_ylabel("x (mm)")
-# ax1.set_zlabel("y (mm)")
-# ax2.set_xlabel("z (mm)")
-# ax2.set_ylabel("x (mm)")
-# ax3.set_xlabel("z (mm)")
-# ax3.set_ylabel("y (mm)")
-# ax4.set_xlabel("x (mm)")
-# ax4.set_ylabel("y (mm)")
-#quad_loop.show_field_magnitude("B", vmax=50, gif_name="quad_Bmagn.mp4")
 plt.show()
     
